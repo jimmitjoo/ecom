@@ -164,24 +164,61 @@ Deletes multiple products in a single request.
 
 ### Real-time Updates (WebSocket)
 
-#### WebSocket Connection
-**WS** `/ws`
+#### Connection Details
+- Endpoint: `ws://localhost:8080/ws`
+- Protocol: WebSocket (RFC 6455)
+- Supported Operations: Text messages (JSON)
 
-Establishes a WebSocket connection for real-time updates.
+#### Reconnection Strategy
+The client implements an exponential backoff strategy for reconnections:
+- Initial retry delay: 2 seconds
+- Maximum retries: 5
+- Backoff multiplier: 2 (2s, 4s, 8s, 16s, 32s)
+- Automatic reconnection when:
+  - Connection is lost
+  - Browser tab becomes active again
+  - Network connectivity is restored
 
-#### Event Types
-- `product.created` - New product created
-- `product.updated` - Product updated
-- `product.deleted` - Product deleted
+Example implementation:
+```javascript
+const MAX_RETRIES = 5;
+const RETRY_DELAY_MS = 2000;
 
-#### Event Format
+function connectWebSocket() {
+    if (retryCount >= MAX_RETRIES) {
+        console.error('Max retry attempts reached');
+        return;
+    }
+
+    const delay = RETRY_DELAY_MS * Math.pow(2, retryCount);
+    setTimeout(() => {
+        // Attempt reconnection
+        retryCount++;
+    }, delay);
+}
+```
+
+#### Handling Missed Events
+The system handles missed events through several mechanisms:
+
+1. **State Synchronization**
+   - Client can request full state by fetching all products via REST API
+   - Use GET /products endpoint after reconnection
+   - Compare local state with server state
+
+2. **Event Ordering**
+   - Events include timestamps for ordering
+   - Each event has a unique ID for deduplication
+   - Events for the same product are processed in timestamp order
+
+Example event with ordering information:
 ```json
 {
-    "id": "event_123",
-    "type": "product.created",
+    "id": "evt_123",
+    "type": "product.updated",
     "data": {
         "product_id": "prod_123",
-        "action": "created",
+        "action": "updated",
         "product": {
             // Product data
         }
@@ -189,6 +226,120 @@ Establishes a WebSocket connection for real-time updates.
     "timestamp": "2024-02-20T12:00:00Z"
 }
 ```
+
+#### Event Idempotency
+Events are designed to be idempotent to handle duplicate processing:
+
+1. **Event IDs**
+   - Each event has a unique ID
+   - Clients can track processed event IDs
+   - Duplicate events can be safely ignored
+
+2. **State-Based Updates**
+   - Events contain full resource state
+   - Processing same event multiple times is safe
+   - Final state remains consistent
+
+Example client-side idempotency handling:
+```javascript
+const processedEvents = new Set();
+
+ws.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    
+    // Check if event was already processed
+    if (processedEvents.has(data.id)) {
+        console.log('Duplicate event ignored:', data.id);
+        return;
+    }
+    
+    // Process event
+    handleEvent(data);
+    
+    // Mark event as processed
+    processedEvents.add(data.id);
+    
+    // Cleanup old events (optional)
+    if (processedEvents.size > 1000) {
+        cleanupOldEvents();
+    }
+};
+```
+
+#### Best Practices
+1. **Connection Management**
+   - Implement heartbeat mechanism
+   - Monitor connection state
+   - Log reconnection attempts
+   - Clear resources on disconnect
+
+2. **Event Processing**
+   - Maintain event order
+   - Handle duplicates
+   - Validate event data
+   - Implement error handling
+
+3. **State Management**
+   - Keep local state
+   - Implement state recovery
+   - Handle partial updates
+   - Validate state consistency
+
+4. **Error Handling**
+   - Log connection errors
+   - Handle message parsing errors
+   - Implement fallback mechanisms
+   - Notify users of connection status
+
+### Event Types and Format
+
+The API uses the following event types for real-time updates:
+
+#### Event Types
+- `product.created` - Emitted when a new product is created
+- `product.updated` - Emitted when an existing product is updated
+- `product.deleted` - Emitted when a product is deleted
+
+#### Event Structure
+```json
+{
+    "id": "evt_123abc",        // Unique event ID
+    "type": "product.created", // Event type
+    "data": {
+        "product_id": "prod_123", // ID of affected product
+        "action": "created",      // Action performed
+        "product": {              // Full product data
+            "id": "prod_123",
+            "sku": "TSHIRT-001",
+            "base_title": "Basic T-shirt",
+            "description": "Classic t-shirt in 100% cotton",
+            "prices": [
+                {
+                    "currency": "SEK",
+                    "amount": 299.00
+                }
+            ],
+            "metadata": [
+                {
+                    "market": "SE",
+                    "title": "Basic T-shirt",
+                    "description": "Classic t-shirt in 100% cotton"
+                }
+            ],
+            "created_at": "2024-02-20T12:00:00Z",
+            "updated_at": "2024-02-20T12:00:00Z"
+        }
+    },
+    "timestamp": "2024-02-20T12:00:00Z" // When the event occurred
+}
+```
+
+#### Event Handling Notes
+- All events include the full product data (except delete events)
+- Events are ordered by timestamp
+- Each event has a unique ID for deduplication
+- Delete events include the product data before deletion
+- Batch operations generate individual events for each affected product
 
 ## Error Handling
 
