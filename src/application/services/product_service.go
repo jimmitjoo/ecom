@@ -2,10 +2,9 @@ package services
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
+	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -50,10 +49,7 @@ func (s *productService) CreateProduct(product *models.Product) error {
 	product.Version = 1
 	product.LastHash = product.CalculateHash()
 
-	if err := s.repo.Create(product); err != nil {
-		return err
-	}
-
+	// Create event first
 	event := &models.Event{
 		ID:       uuid.New().String(),
 		Type:     models.EventProductCreated,
@@ -70,6 +66,17 @@ func (s *productService) CreateProduct(product *models.Product) error {
 		Timestamp: time.Now(),
 	}
 
+	// Store event first
+	if err := s.repo.StoreEvent(event); err != nil {
+		return err
+	}
+
+	// Then create the product
+	if err := s.repo.Create(product); err != nil {
+		return err
+	}
+
+	// Finally publish the event
 	return s.publisher.Publish(event)
 }
 
@@ -82,7 +89,6 @@ func (s *productService) GetProduct(id string) (*models.Product, error) {
 func (s *productService) UpdateProduct(product *models.Product) error {
 	ctx := context.Background()
 
-	// Acquire lock
 	acquired, err := s.locks.AcquireLock(ctx, product.ID, 10*time.Second)
 	if err != nil {
 		return err
@@ -92,49 +98,51 @@ func (s *productService) UpdateProduct(product *models.Product) error {
 	}
 	defer s.locks.ReleaseLock(product.ID)
 
-	// Get current version
 	current, err := s.repo.GetByID(product.ID)
 	if err != nil {
 		return err
 	}
 
-	// Check version conflicts
 	if product.Version != current.Version {
 		return errors.New("version conflict detected")
 	}
 
-	// Calculate changes
-	changes := calculateChanges(current, product)
+	// Skapa en kopia av produkten innan vi uppdaterar den
+	updatedProduct := product.Clone()
+	updatedProduct.Version++
+	updatedProduct.UpdatedAt = time.Now()
+	updatedProduct.LastHash = updatedProduct.CalculateHash()
 
-	// Store current hash before update
-	prevHash := current.LastHash
-
-	// Update version and timestamps
-	product.UpdateVersion() // This increments version and updates hash
-	product.UpdatedAt = time.Now()
-
-	// Create event with changes
+	// Skapa event med den uppdaterade produkten
 	event := &models.Event{
 		ID:       uuid.New().String(),
 		Type:     models.EventProductUpdated,
-		EntityID: product.ID,
-		Version:  product.Version,
+		EntityID: updatedProduct.ID,
+		Version:  updatedProduct.Version,
 		Sequence: s.getNextSequence(),
 		Data: &models.ProductEvent{
-			ProductID: product.ID,
+			ProductID: updatedProduct.ID,
 			Action:    "updated",
-			Product:   product,
-			Version:   product.Version,
-			PrevHash:  prevHash,
-			Changes:   changes,
+			Product:   updatedProduct.Clone(), // Spara en kopia av den uppdaterade produkten
+			Version:   updatedProduct.Version,
+			PrevHash:  current.LastHash, // Använd current.LastHash som PrevHash
+			Changes:   calculateChanges(current, updatedProduct),
 		},
 		Timestamp: time.Now(),
 	}
 
-	// Update product and publish event
-	if err := s.repo.Update(product); err != nil {
+	// Spara event först
+	if err := s.repo.StoreEvent(event); err != nil {
 		return err
 	}
+
+	// Sen uppdatera produkten
+	if err := s.repo.Update(updatedProduct); err != nil {
+		return err
+	}
+
+	// Kopiera tillbaka värdena till original-produkten
+	*product = *updatedProduct
 
 	return s.publisher.Publish(event)
 }
@@ -147,23 +155,34 @@ func (s *productService) DeleteProduct(id string) error {
 		return err
 	}
 
-	// Delete the product
-	if err := s.repo.Delete(id); err != nil {
-		return err
-	}
-
-	// Create and publish product deletion event
+	// Create deletion event
 	event := &models.Event{
-		ID:   uuid.New().String(),
-		Type: models.EventProductDeleted,
+		ID:       uuid.New().String(),
+		Type:     models.EventProductDeleted,
+		EntityID: id,
+		Version:  product.Version + 1,
+		Sequence: s.getNextSequence(),
 		Data: &models.ProductEvent{
 			ProductID: id,
 			Action:    "deleted",
-			Product:   product, // Include product data in event
+			Product:   product,
+			Version:   product.Version + 1,
+			PrevHash:  product.LastHash, // Använd current hash som prev hash
 		},
 		Timestamp: time.Now(),
 	}
 
+	// Store event first
+	if err := s.repo.StoreEvent(event); err != nil {
+		return err
+	}
+
+	// Then delete the product
+	if err := s.repo.Delete(id); err != nil {
+		return err
+	}
+
+	// Finally publish the event
 	return s.publisher.Publish(event)
 }
 
@@ -177,37 +196,18 @@ func (s *productService) BatchCreateProducts(products []*models.Product) ([]*int
 		wg.Add(1)
 		go func(index int, p *models.Product) {
 			defer wg.Done()
-			result := &interfaces.BatchResult{ID: p.ID}
 
-			// Generate ID and timestamps
-			p.ID = "prod_" + uuid.New().String()
-			p.CreatedAt = time.Now()
-			p.UpdatedAt = time.Now()
-
-			if err := models.ValidateProduct(p); err != nil {
-				result.Success = false
-				result.Error = err.Error()
-			} else if err := s.repo.Create(p); err != nil {
-				result.Success = false
-				result.Error = "Failed to create product"
-			} else {
-				result.Success = true
-				// Publish event for each successfully created product
-				event := &models.Event{
-					ID:   uuid.New().String(),
-					Type: models.EventProductCreated,
-					Data: &models.ProductEvent{
-						ProductID: p.ID,
-						Action:    "created",
-						Product:   p,
-					},
-					Timestamp: time.Now(),
-				}
-				s.publisher.Publish(event)
-			}
+			// Skapa produkten först
+			err := s.CreateProduct(p)
 
 			mu.Lock()
-			results[index] = result
+			results[index] = &interfaces.BatchResult{
+				ID:      p.ID, // Nu har produkten ett ID efter CreateProduct
+				Success: err == nil,
+			}
+			if err != nil {
+				results[index].Error = err.Error()
+			}
 			mu.Unlock()
 		}(i, product)
 	}
@@ -226,34 +226,17 @@ func (s *productService) BatchUpdateProducts(products []*models.Product) ([]*int
 		wg.Add(1)
 		go func(index int, p *models.Product) {
 			defer wg.Done()
-			result := &interfaces.BatchResult{ID: p.ID}
 
-			p.UpdatedAt = time.Now()
-
-			if err := models.ValidateProduct(p); err != nil {
-				result.Success = false
-				result.Error = err.Error()
-			} else if err := s.repo.Update(p); err != nil {
-				result.Success = false
-				result.Error = "Failed to update product"
-			} else {
-				result.Success = true
-				// Publish event for each successfully updated product
-				event := &models.Event{
-					ID:   uuid.New().String(),
-					Type: models.EventProductUpdated,
-					Data: &models.ProductEvent{
-						ProductID: p.ID,
-						Action:    "updated",
-						Product:   p,
-					},
-					Timestamp: time.Now(),
-				}
-				s.publisher.Publish(event)
-			}
+			err := s.UpdateProduct(p)
 
 			mu.Lock()
-			results[index] = result
+			results[index] = &interfaces.BatchResult{
+				ID:      p.ID,
+				Success: err == nil,
+			}
+			if err != nil {
+				results[index].Error = err.Error()
+			}
 			mu.Unlock()
 		}(i, product)
 	}
@@ -340,19 +323,56 @@ func (s *productService) ReplayEvents(productID string, fromVersion int64) ([]*m
 		return nil, err
 	}
 
-	// Verify event chain
-	for i := 1; i < len(events); i++ {
-		curr := events[i]
-		prev := events[i-1]
+	if len(events) == 0 {
+		return events, nil
+	}
 
-		if curr.Version != prev.Version+1 {
-			return nil, errors.New("event chain broken")
+	// Sortera events efter version
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].Version < events[j].Version
+	})
+
+	// Verifiera event chain
+	for i := 0; i < len(events); i++ {
+		curr := events[i]
+		currEvent, ok := curr.Data.(*models.ProductEvent)
+		if !ok {
+			return nil, errors.New("invalid event data")
 		}
 
-		// Verify event integrity
-		productEvent := curr.Data.(*models.ProductEvent)
-		if productEvent.PrevHash != calculateHash(prev.Data.(*models.ProductEvent).Product) {
-			return nil, errors.New("event chain integrity violated")
+		if i == 0 {
+			// För första eventet i sekvensen
+			if curr.Type == models.EventProductCreated {
+				// Create-event ska inte ha någon PrevHash
+				if currEvent.PrevHash != "" {
+					return nil, errors.New("create event should not have prev hash")
+				}
+			} else {
+				// Om första eventet inte är create, verifiera att det har en PrevHash
+				if currEvent.PrevHash == "" {
+					return nil, errors.New("non-create event must have prev hash")
+				}
+			}
+			continue
+		}
+
+		// För efterföljande events
+		prev := events[i-1]
+		prevEvent, ok := prev.Data.(*models.ProductEvent)
+		if !ok {
+			return nil, errors.New("invalid event data")
+		}
+
+		// Kontrollera versionsnumren
+		if curr.Version != prev.Version+1 {
+			return nil, fmt.Errorf("event chain broken: curr version %d, prev version %d",
+				curr.Version, prev.Version)
+		}
+
+		// Verifiera hash-kedjan
+		if currEvent.PrevHash != prevEvent.Product.LastHash {
+			return nil, fmt.Errorf("event chain integrity violated: expected hash %s, got %s",
+				prevEvent.Product.LastHash, currEvent.PrevHash)
 		}
 	}
 
@@ -373,13 +393,6 @@ func calculateChanges(old, new *models.Product) []models.Change {
 	// Add more field comparisons...
 
 	return changes
-}
-
-func calculateHash(product *models.Product) string {
-	// Implement a hash function for the product state
-	data, _ := json.Marshal(product)
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:])
 }
 
 func (s *productService) getNextSequence() int64 {

@@ -59,8 +59,29 @@ func ValidateProduct(product *Product) error {
 
 // CalculateHash generates a hash of the product's current state
 func (p *Product) CalculateHash() string {
-	// Använd den befintliga calculateHash-funktionen från service-lagret
-	data, _ := json.Marshal(p)
+	// Skapa en struct med bara de fält vi vill inkludera i hashen
+	hashStruct := struct {
+		ID          string           `json:"id"`
+		SKU         string           `json:"sku"`
+		BaseTitle   string           `json:"base_title"`
+		Description string           `json:"description"`
+		Prices      []Price          `json:"prices"`
+		Variants    []Variant        `json:"variants"`
+		Metadata    []MarketMetadata `json:"metadata"`
+		Version     int64            `json:"version"`
+	}{
+		ID:          p.ID,
+		SKU:         p.SKU,
+		BaseTitle:   p.BaseTitle,
+		Description: p.Description,
+		Prices:      p.Prices,
+		Variants:    p.Variants,
+		Metadata:    p.Metadata,
+		Version:     p.Version,
+	}
+
+	// Exkludera tidsstämplar och LastHash från hashen
+	data, _ := json.Marshal(hashStruct)
 	hash := sha256.Sum256(data)
 	return hex.EncodeToString(hash[:])
 }
@@ -69,4 +90,28 @@ func (p *Product) CalculateHash() string {
 func (p *Product) UpdateVersion() {
 	p.Version++
 	p.LastHash = p.CalculateHash()
+}
+
+// Clone creates a deep copy of the product
+func (p *Product) Clone() *Product {
+	clone := *p // Shallow copy
+
+	// Deep copy slices and maps
+	clone.Prices = make([]Price, len(p.Prices))
+	copy(clone.Prices, p.Prices)
+
+	clone.Metadata = make([]MarketMetadata, len(p.Metadata))
+	copy(clone.Metadata, p.Metadata)
+
+	if p.Variants != nil {
+		clone.Variants = make([]Variant, len(p.Variants))
+		copy(clone.Variants, p.Variants)
+	}
+
+	// Kopiera tidsstämplar och hash
+	clone.CreatedAt = p.CreatedAt
+	clone.UpdatedAt = p.UpdatedAt
+	clone.LastHash = p.LastHash
+
+	return &clone
 }

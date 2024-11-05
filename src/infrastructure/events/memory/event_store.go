@@ -1,67 +1,84 @@
 package memory
 
 import (
-	"sort"
 	"sync"
 
 	"github.com/jimmitjoo/ecom/src/domain/models"
 )
 
+// MemoryEventStore implements an in-memory event store
 type MemoryEventStore struct {
-	events map[string][]*models.Event // entityID -> events
+	events []*models.Event
 	mu     sync.RWMutex
 }
 
+// NewMemoryEventStore creates a new in-memory event store
 func NewMemoryEventStore() *MemoryEventStore {
 	return &MemoryEventStore{
-		events: make(map[string][]*models.Event),
+		events: make([]*models.Event, 0),
 	}
 }
 
+// StoreEvent stores an event in memory
 func (s *MemoryEventStore) StoreEvent(event *models.Event) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.events[event.EntityID]; !exists {
-		s.events[event.EntityID] = make([]*models.Event, 0)
+	// Skapa en djup kopia av eventet innan vi sparar det
+	eventCopy := *event
+	if productEvent, ok := event.Data.(*models.ProductEvent); ok {
+		productEventCopy := *productEvent
+		productEventCopy.Product = productEvent.Product.Clone()
+		eventCopy.Data = &productEventCopy
 	}
-	s.events[event.EntityID] = append(s.events[event.EntityID], event)
 
-	// Sort events by version to maintain order
-	sort.Slice(s.events[event.EntityID], func(i, j int) bool {
-		return s.events[event.EntityID][i].Version < s.events[event.EntityID][j].Version
-	})
-
+	s.events = append(s.events, &eventCopy)
 	return nil
 }
 
+// GetEvents returns all events for a specific entity from a given version
 func (s *MemoryEventStore) GetEvents(entityID string, fromVersion int64) ([]*models.Event, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if events, exists := s.events[entityID]; exists {
-		result := make([]*models.Event, 0)
-		for _, event := range events {
-			if event.Version >= fromVersion {
-				result = append(result, event)
+	var filteredEvents []*models.Event
+	for _, event := range s.events {
+		if event.EntityID == entityID && event.Version >= fromVersion {
+			// Skapa en djup kopia av eventet
+			eventCopy := *event
+			if productEvent, ok := event.Data.(*models.ProductEvent); ok {
+				productEventCopy := *productEvent
+				productEventCopy.Product = productEvent.Product.Clone()
+				eventCopy.Data = &productEventCopy
 			}
+			filteredEvents = append(filteredEvents, &eventCopy)
 		}
-		return result, nil
 	}
-	return nil, nil
+
+	return filteredEvents, nil
 }
 
+// GetSnapshot returns the latest snapshot for an entity
 func (s *MemoryEventStore) GetSnapshot(entityID string) (*models.Product, int64, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	events, exists := s.events[entityID]
-	if !exists || len(events) == 0 {
+	var latestEvent *models.Event
+	var latestVersion int64
+
+	// Hitta senaste eventet för denna entity
+	for _, event := range s.events {
+		if event.EntityID == entityID && event.Version > latestVersion {
+			latestEvent = event
+			latestVersion = event.Version
+		}
+	}
+
+	if latestEvent == nil {
 		return nil, 0, nil
 	}
 
-	// Get latest event
-	latestEvent := events[len(events)-1]
+	// Konvertera event data till product
 	if productEvent, ok := latestEvent.Data.(*models.ProductEvent); ok {
 		return productEvent.Product, latestEvent.Version, nil
 	}
@@ -69,9 +86,9 @@ func (s *MemoryEventStore) GetSnapshot(entityID string) (*models.Product, int64,
 	return nil, 0, nil
 }
 
+// CreateSnapshot stores a snapshot of the entity state
 func (s *MemoryEventStore) CreateSnapshot(entityID string, product *models.Product, version int64) error {
-	// In a real implementation, this would store the snapshot in a persistent store
-	// For memory implementation, we don't need to do anything as we always have
-	// all events in memory
+	// I en minnesimplementation behöver vi inte spara snapshots
+	// eftersom vi alltid har alla events tillgängliga
 	return nil
 }

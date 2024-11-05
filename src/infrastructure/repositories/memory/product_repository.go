@@ -75,6 +75,7 @@ func (r *ProductRepository) List() ([]*models.Product, error) {
 	return products, nil
 }
 
+// GetEventsByProductID hämtar alla events för en produkt från en given version
 func (r *ProductRepository) GetEventsByProductID(productID string, fromVersion int64) ([]*models.Event, error) {
 	return r.eventStore.GetEvents(productID, fromVersion)
 }
