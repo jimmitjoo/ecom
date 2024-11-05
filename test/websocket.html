@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Product API Test</title>
+    <style>
+        .event {
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+
+        /* Event type specific styling */
+        .created {
+            background-color: #dff0d8;
+        }
+
+        /* Green for created */
+        .updated {
+            background-color: #fcf8e3;
+        }
+
+        /* Yellow for updated */
+        .deleted {
+            background-color: #f2dede;
+        }
+
+        /* Red for deleted */
+    </style>
+</head>
+
+<body>
+    <h1>Product API Test</h1>
+
+    <div>
+        <h2>Create Product</h2>
+        <button onclick="createProduct()">Create Test Product</button>
+    </div>
+
+    <div>
+        <h2>WebSocket Events</h2>
+        <div id="events"></div>
+    </div>
+
+    <script>
+        // Initialize WebSocket connection
+        const ws = new WebSocket('ws://localhost:8080/ws');
+        let eventDiv = document.getElementById('events');
+
+        // Handle incoming WebSocket messages
+        ws.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            const div = document.createElement('div');
+            div.className = `event ${data.data.action}`;
+            div.innerHTML = `
+                <strong>${data.type}</strong><br>
+                ${JSON.stringify(data.data, null, 2)}
+            `;
+            eventDiv.prepend(div);
+        };
+
+        // Function to create a test product
+        function createProduct() {
+            const product = {
+                "sku": "TEST-" + Math.random().toString(36).substring(7),
+                "base_title": "Test Product",
+                "description": "Test description",
+                "prices": [
+                    {
+                        "currency": "SEK",
+                        "amount": 299.00
+                    }
+                ],
+                "metadata": [
+                    {
+                        "market": "SE",
+                        "title": "Test Product",
+                        "description": "Test description"
+                    }
+                ]
+            };
+
+            // Send POST request to create product
+            fetch('http://localhost:8080/products', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(product)
+            })
+                .then(response => response.json())
+                .then(data => console.log('Created product:', data))
+                .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+
+</html>
