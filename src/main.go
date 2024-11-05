@@ -30,7 +30,12 @@ func main() {
 	// Set up router
 	r := mux.NewRouter()
 
-	// REST endpoints
+	// Batch endpoints (must come before specific product endpoints)
+	r.HandleFunc("/products/batch", productHandler.BatchCreateProducts).Methods("POST")
+	r.HandleFunc("/products/batch", productHandler.BatchUpdateProducts).Methods("PUT")
+	r.HandleFunc("/products/batch", productHandler.BatchDeleteProducts).Methods("DELETE")
+
+	// REST endpoints for individual products
 	r.HandleFunc("/products", productHandler.ListProducts).Methods("GET")
 	r.HandleFunc("/products", productHandler.CreateProduct).Methods("POST")
 	r.HandleFunc("/products/{id}", productHandler.GetProduct).Methods("GET")

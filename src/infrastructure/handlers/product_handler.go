@@ -125,3 +125,58 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// BatchCreateProducts handles POST requests to create multiple products at once
+func (h *ProductHandler) BatchCreateProducts(w http.ResponseWriter, r *http.Request) {
+	var products []*models.Product
+	if err := json.NewDecoder(r.Body).Decode(&products); err != nil {
+		h.writeError(w, http.StatusBadRequest, "Invalid JSON data")
+		return
+	}
+
+	results, err := h.service.BatchCreateProducts(products)
+	if err != nil {
+		h.writeError(w, http.StatusInternalServerError, "Failed to create products")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(results)
+}
+
+// BatchUpdateProducts handles PUT requests to update multiple products at once
+func (h *ProductHandler) BatchUpdateProducts(w http.ResponseWriter, r *http.Request) {
+	var products []*models.Product
+	if err := json.NewDecoder(r.Body).Decode(&products); err != nil {
+		h.writeError(w, http.StatusBadRequest, "Invalid JSON data")
+		return
+	}
+
+	results, err := h.service.BatchUpdateProducts(products)
+	if err != nil {
+		h.writeError(w, http.StatusInternalServerError, "Failed to update products")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
+// BatchDeleteProducts handles DELETE requests to remove multiple products at once
+func (h *ProductHandler) BatchDeleteProducts(w http.ResponseWriter, r *http.Request) {
+	var productIDs []string
+	if err := json.NewDecoder(r.Body).Decode(&productIDs); err != nil {
+		h.writeError(w, http.StatusBadRequest, "Invalid JSON data")
+		return
+	}
+
+	results, err := h.service.BatchDeleteProducts(productIDs)
+	if err != nil {
+		h.writeError(w, http.StatusInternalServerError, "Failed to delete products")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}

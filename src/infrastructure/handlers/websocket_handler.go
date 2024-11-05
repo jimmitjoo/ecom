@@ -24,6 +24,7 @@ type WebSocketHandler struct {
 	clients   map[*websocket.Conn]bool
 	publisher events.EventPublisher
 	mu        sync.RWMutex
+	writeMu   sync.Mutex // New mutex for write operations
 }
 
 func NewWebSocketHandler(publisher events.EventPublisher) *WebSocketHandler {
@@ -36,6 +37,13 @@ func NewWebSocketHandler(publisher events.EventPublisher) *WebSocketHandler {
 	handler.subscribeToEvents()
 
 	return handler
+}
+
+// writeMessage is a thread-safe wrapper for writing to a WebSocket connection
+func (h *WebSocketHandler) writeMessage(conn *websocket.Conn, messageType int, data []byte) error {
+	h.writeMu.Lock()
+	defer h.writeMu.Unlock()
+	return conn.WriteMessage(messageType, data)
 }
 
 func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +76,7 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 		}
 
 		if messageType == websocket.PingMessage {
-			if err := conn.WriteMessage(websocket.PongMessage, nil); err != nil {
+			if err := h.writeMessage(conn, websocket.PongMessage, nil); err != nil {
 				log.Printf("Failed to send pong: %v", err)
 				break
 			}
@@ -98,13 +106,19 @@ func (h *WebSocketHandler) broadcastEvent(event *models.Event) {
 	}
 
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-
+	clients := make([]*websocket.Conn, 0, len(h.clients))
 	for client := range h.clients {
-		if err := client.WriteMessage(websocket.TextMessage, data); err != nil {
+		clients = append(clients, client)
+	}
+	h.mu.RUnlock()
+
+	for _, client := range clients {
+		if err := h.writeMessage(client, websocket.TextMessage, data); err != nil {
 			log.Printf("Failed to send message to client: %v", err)
-			client.Close()
+			h.mu.Lock()
 			delete(h.clients, client)
+			h.mu.Unlock()
+			client.Close()
 		}
 	}
 }

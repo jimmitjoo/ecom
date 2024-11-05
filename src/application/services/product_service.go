@@ -1,6 +1,7 @@
 package services
 
 import (
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -88,6 +89,12 @@ func (s *productService) UpdateProduct(product *models.Product) error {
 
 // DeleteProduct removes a product and publishes a deletion event
 func (s *productService) DeleteProduct(id string) error {
+	// Get product before deletion for event data
+	product, err := s.repo.GetByID(id)
+	if err != nil {
+		return err
+	}
+
 	// Delete the product
 	if err := s.repo.Delete(id); err != nil {
 		return err
@@ -100,9 +107,177 @@ func (s *productService) DeleteProduct(id string) error {
 		Data: &models.ProductEvent{
 			ProductID: id,
 			Action:    "deleted",
+			Product:   product, // Include product data in event
 		},
 		Timestamp: time.Now(),
 	}
 
 	return s.publisher.Publish(event)
+}
+
+// BatchCreateProducts creates multiple products in parallel
+func (s *productService) BatchCreateProducts(products []*models.Product) ([]*interfaces.BatchResult, error) {
+	results := make([]*interfaces.BatchResult, len(products))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for i, product := range products {
+		wg.Add(1)
+		go func(index int, p *models.Product) {
+			defer wg.Done()
+			result := &interfaces.BatchResult{ID: p.ID}
+
+			// Generate ID and timestamps
+			p.ID = "prod_" + uuid.New().String()
+			p.CreatedAt = time.Now()
+			p.UpdatedAt = time.Now()
+
+			if err := models.ValidateProduct(p); err != nil {
+				result.Success = false
+				result.Error = err.Error()
+			} else if err := s.repo.Create(p); err != nil {
+				result.Success = false
+				result.Error = "Failed to create product"
+			} else {
+				result.Success = true
+				// Publish event for each successfully created product
+				event := &models.Event{
+					ID:   uuid.New().String(),
+					Type: models.EventProductCreated,
+					Data: &models.ProductEvent{
+						ProductID: p.ID,
+						Action:    "created",
+						Product:   p,
+					},
+					Timestamp: time.Now(),
+				}
+				s.publisher.Publish(event)
+			}
+
+			mu.Lock()
+			results[index] = result
+			mu.Unlock()
+		}(i, product)
+	}
+
+	wg.Wait()
+	return results, nil
+}
+
+// BatchUpdateProducts updates multiple products in parallel
+func (s *productService) BatchUpdateProducts(products []*models.Product) ([]*interfaces.BatchResult, error) {
+	results := make([]*interfaces.BatchResult, len(products))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for i, product := range products {
+		wg.Add(1)
+		go func(index int, p *models.Product) {
+			defer wg.Done()
+			result := &interfaces.BatchResult{ID: p.ID}
+
+			p.UpdatedAt = time.Now()
+
+			if err := models.ValidateProduct(p); err != nil {
+				result.Success = false
+				result.Error = err.Error()
+			} else if err := s.repo.Update(p); err != nil {
+				result.Success = false
+				result.Error = "Failed to update product"
+			} else {
+				result.Success = true
+				// Publish event for each successfully updated product
+				event := &models.Event{
+					ID:   uuid.New().String(),
+					Type: models.EventProductUpdated,
+					Data: &models.ProductEvent{
+						ProductID: p.ID,
+						Action:    "updated",
+						Product:   p,
+					},
+					Timestamp: time.Now(),
+				}
+				s.publisher.Publish(event)
+			}
+
+			mu.Lock()
+			results[index] = result
+			mu.Unlock()
+		}(i, product)
+	}
+
+	wg.Wait()
+	return results, nil
+}
+
+// BatchDeleteProducts deletes multiple products in parallel
+func (s *productService) BatchDeleteProducts(ids []string) ([]*interfaces.BatchResult, error) {
+	results := make([]*interfaces.BatchResult, len(ids))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for i, id := range ids {
+		wg.Add(1)
+		go func(index int, productID string) {
+			defer wg.Done()
+			result := &interfaces.BatchResult{ID: productID}
+
+			// Get product before deletion for event data
+			product, err := s.repo.GetByID(productID)
+			if err != nil {
+				result.Success = false
+				result.Error = "Failed to find product"
+				mu.Lock()
+				results[index] = result
+				mu.Unlock()
+				return
+			}
+
+			if err := s.repo.Delete(productID); err != nil {
+				result.Success = false
+				result.Error = "Failed to delete product"
+			} else {
+				result.Success = true
+				// Publish event for each successfully deleted product
+				event := &models.Event{
+					ID:   uuid.New().String(),
+					Type: models.EventProductDeleted,
+					Data: &models.ProductEvent{
+						ProductID: productID,
+						Action:    "deleted",
+						Product:   product, // Include product data in event
+					},
+					Timestamp: time.Now(),
+				}
+				s.publisher.Publish(event)
+			}
+
+			mu.Lock()
+			results[index] = result
+			mu.Unlock()
+		}(i, id)
+	}
+
+	wg.Wait()
+	return results, nil
+}
+
+// Helper function for publishing events
+func (s *productService) publishEvent(eventType models.EventType, action string, product *models.Product) {
+	var productID string
+	if product != nil {
+		productID = product.ID
+	}
+
+	event := &models.Event{
+		ID:   uuid.New().String(),
+		Type: eventType,
+		Data: &models.ProductEvent{
+			ProductID: productID,
+			Action:    action,
+			Product:   product,
+		},
+		Timestamp: time.Now(),
+	}
+	s.publisher.Publish(event)
 }
