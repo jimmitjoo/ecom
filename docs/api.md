@@ -1,76 +1,16 @@
 # Product API Documentation
 
 ## Overview
-This API handles products for the e-commerce system. It supports basic CRUD operations (Create, Read, Update, Delete) for product management.
+This API handles products for the e-commerce system. It supports CRUD operations (Create, Read, Update, Delete) for both individual products and batch operations, with real-time updates via WebSocket.
 
 **Base URL:** `http://localhost:8080`
 
-## Endpoints
+## Authentication
+Currently, the API does not require authentication.
 
-### 1. List all products
-**GET** `/products`
+## Data Models
 
-Retrieves a list of all products in the system.
-
-**Response Code:** 200 OK
-
-**Example Response:**
-```json
-[
-    {
-        "id": "prod_123",
-        "sku": "TSHIRT-001",
-        "base_title": "Basic T-shirt",
-        "description": "Classic t-shirt in 100% cotton",
-        "prices": [
-            {
-                "currency": "SEK",
-                "amount": 299.00
-            }
-        ],
-        "variants": [
-            {
-                "id": "var_123",
-                "sku": "TSHIRT-001-BLK-L",
-                "attributes": {
-                    "color": "black",
-                    "size": "L"
-                },
-                "stock": [
-                    {
-                        "location_id": "STH1",
-                        "quantity": 100
-                    }
-                ]
-            }
-        ],
-        "metadata": [
-            {
-                "market": "SE",
-                "title": "Basic T-shirt",
-                "description": "Classic t-shirt in 100% cotton",
-                "keywords": "t-shirt, basic, cotton"
-            }
-        ],
-        "created_at": "2024-02-20T12:00:00Z",
-        "updated_at": "2024-02-20T12:00:00Z"
-    }
-]
-```
-
-### 2. Get specific product
-**GET** `/products/{id}`
-
-Retrieves detailed information about a specific product.
-
-**Parameters:**
-- `id` (path parameter) - Product's unique ID
-
-**Response Codes:**
-- 200 OK - Product found
-- 404 Not Found - Product does not exist
-
-**Example Response (200 OK):**
+### Product Model
 ```json
 {
     "id": "prod_123",
@@ -106,90 +46,135 @@ Retrieves detailed information about a specific product.
             "description": "Classic t-shirt in 100% cotton",
             "keywords": "t-shirt, basic, cotton"
         }
-    ]
+    ],
+    "created_at": "2024-02-20T12:00:00Z",
+    "updated_at": "2024-02-20T12:00:00Z"
 }
 ```
 
-**Example Error Response (404 Not Found):**
+### Validation Rules
+
+#### Product
+- `sku`: Required
+- `base_title`: Required
+- `prices`: At least one price must be specified
+
+#### Price
+- `currency`: Exactly 3 characters (e.g., "SEK", "USD")
+- `amount`: Must be greater than or equal to 0
+
+#### Variant
+- `id`: Unique ID for the variant
+- `sku`: Required
+- `attributes`: At least one attribute must be specified
+
+#### Stock
+- `location_id`: Required
+- `quantity`: Must be greater than or equal to 0
+
+#### Metadata
+- `market`: Required
+- `title`: Required
+
+## API Endpoints
+
+### Single Product Operations
+
+#### List Products
+**GET** `/products`
+
+Returns a list of all products.
+
+**Response:** 200 OK
 ```json
-{
-    "error": "Product with ID 'prod_123' not found"
-}
+[
+    // Array of product objects
+]
 ```
 
-### 3. Create new product
+#### Get Product
+**GET** `/products/{id}`
+
+Returns a specific product by ID.
+
+**Response:** 200 OK or 404 Not Found
+
+#### Create Product
 **POST** `/products`
 
-Creates a new product in the system.
+Creates a new product.
 
-**Headers:**
-- `Content-Type: application/json`
+**Request Body:** Product object (without id)
+**Response:** 201 Created or 400 Bad Request
 
-**Example Request:**
-```json
-{
-    "sku": "TSHIRT-001",
-    "base_title": "Basic T-shirt",
-    "description": "Classic t-shirt in 100% cotton",
-    "prices": [
-        {
-            "currency": "SEK",
-            "amount": 299.00
-        }
-    ],
-    "metadata": [
-        {
-            "market": "SE",
-            "title": "Basic T-shirt",
-            "description": "Classic t-shirt in 100% cotton",
-            "keywords": "t-shirt, basic, cotton"
-        }
-    ]
-}
-```
-
-**Response Codes:**
-- 201 Created - Product created successfully
-- 400 Bad Request - Validation error
-
-### 4. Update product
+#### Update Product
 **PUT** `/products/{id}`
 
 Updates an existing product.
 
-**Headers:**
-- Content-Type: application/json
+**Request Body:** Product object
+**Response:** 200 OK, 400 Bad Request, or 404 Not Found
 
-**Parameters:**
-- `id` (path parameter) - Product's unique ID
-
-**Request:** Same format as product creation
-
-**Response Codes:**
-- 200 OK - Product updated successfully
-- 400 Bad Request - Validation error
-- 404 Not Found - Product does not exist
-
-### 5. Delete product
+#### Delete Product
 **DELETE** `/products/{id}`
 
-Removes a product from the system.
+Deletes a product.
 
-**Parameters:**
-- `id` (path parameter) - Product's unique ID
+**Response:** 204 No Content or 404 Not Found
 
-**Response Codes:**
-- 204 No Content - Product deleted successfully
-- 404 Not Found - Product does not exist
+### Batch Operations
 
-## Real-time Updates via WebSocket
+#### Create Multiple Products
+**POST** `/products/batch`
 
-The API supports real-time updates via WebSocket for receiving immediate updates when products are created, updated, or deleted.
+Creates multiple products in a single request.
 
-### WebSocket Endpoint
+**Request Body:**
+```json
+[
+    // Array of product objects
+]
+```
+
+**Response:** 201 Created
+```json
+[
+    {
+        "success": true,
+        "id": "prod_abc123",
+        "error": ""
+    }
+]
+```
+
+#### Update Multiple Products
+**PUT** `/products/batch`
+
+Updates multiple products in a single request.
+
+#### Delete Multiple Products
+**DELETE** `/products/batch`
+
+Deletes multiple products in a single request.
+
+**Request Body:**
+```json
+["prod_123", "prod_456"]
+```
+
+### Real-time Updates (WebSocket)
+
+#### WebSocket Connection
 **WS** `/ws`
 
-### Event Format
+Establishes a WebSocket connection for real-time updates.
+
+#### Event Types
+- `product.created` - New product created
+- `product.updated` - Product updated
+- `product.deleted` - Product deleted
+
+#### Event Format
 ```json
 {
     "id": "event_123",
@@ -205,12 +190,47 @@ The API supports real-time updates via WebSocket for receiving immediate updates
 }
 ```
 
-### Event Types
-- `product.created` - When a new product is created
-- `product.updated` - When a product is updated
-- `product.deleted` - When a product is deleted
+## Error Handling
 
-### JavaScript Example
+### Error Response Format
+```json
+{
+    "error": "Descriptive error message"
+}
+```
+
+### HTTP Status Codes
+- `200 OK` - Success
+- `201 Created` - Resource created
+- `204 No Content` - Resource deleted
+- `400 Bad Request` - Invalid request or validation error
+- `404 Not Found` - Resource not found
+- `500 Internal Server Error` - Server error
+
+## Code Examples
+
+### cURL Examples
+
+#### List Products
+```bash
+curl -X GET http://localhost:8080/products
+```
+
+#### Create Product
+```bash
+curl -X POST http://localhost:8080/products \
+    -H "Content-Type: application/json" \
+    -d '{
+        "sku": "TSHIRT-001",
+        "base_title": "Basic T-shirt",
+        "prices": [{
+            "currency": "SEK",
+            "amount": 299.00
+        }]
+    }'
+```
+
+### JavaScript WebSocket Example
 ```javascript
 const ws = new WebSocket('ws://localhost:8080/ws');
 
@@ -220,109 +240,17 @@ ws.onmessage = function(event) {
     
     switch(data.type) {
         case 'product.created':
-            console.log('New product created:', data.data.product);
+            console.log('New product:', data.data.product);
             break;
         case 'product.updated':
-            console.log('Product updated:', data.data.product);
+            console.log('Updated product:', data.data.product);
             break;
         case 'product.deleted':
-            console.log('Product deleted:', data.data.product_id);
+            console.log('Deleted product:', data.data.product_id);
             break;
     }
 };
-
-ws.onerror = function(error) {
-    console.error('WebSocket error:', error);
-};
-
-ws.onclose = function() {
-    console.log('WebSocket connection closed');
-};
 ```
 
-## Validation Rules
-
-### Product
-- `sku`: Required
-- `base_title`: Required
-- `prices`: At least one price must be specified
-
-### Price
-- `currency`: Exactly 3 characters (e.g., "SEK", "USD")
-- `amount`: Must be greater than or equal to 0
-
-### Variant
-- `id`: Unique ID for the variant
-- `sku`: Required
-- `attributes`: At least one attribute must be specified
-
-### Stock
-- `location_id`: Required
-- `quantity`: Must be greater than or equal to 0
-
-### Metadata
-- `market`: Required
-- `title`: Required
-
-## Error Handling
-
-The API returns structured error messages in the following format:
-```json
-{
-    "error": "Descriptive error message"
-}
-```
-
-### Common Error Codes
-- `400 Bad Request` - Invalid request or validation error
-- `404 Not Found` - Resource not found
-- `500 Internal Server Error` - Server error
-
-## Examples with cURL
-
-### List all products
-```bash
-curl -X GET http://localhost:8080/products
-```
-
-### Get specific product
-```bash
-curl -X GET http://localhost:8080/products/prod_123
-```
-
-### Create product
-```bash
-curl -X POST http://localhost:8080/products \
-    -H "Content-Type: application/json" \
-    -d '{
-        "sku": "TSHIRT-001",
-        "base_title": "Basic T-shirt",
-        "prices": [
-            {
-                "currency": "SEK",
-                "amount": 299.00
-            }
-        ]
-    }'
-```
-
-### Update product
-```bash
-curl -X PUT http://localhost:8080/products/prod_123 \
-    -H "Content-Type: application/json" \
-    -d '{
-        "sku": "TSHIRT-001",
-        "base_title": "Updated T-shirt",
-        "prices": [
-            {
-                "currency": "SEK",
-                "amount": 399.00
-            }
-        ]
-    }'
-```
-
-### Delete product
-```bash
-curl -X DELETE http://localhost:8080/products/prod_123
-```
+## Rate Limiting
+Currently, no rate limiting is implemented.

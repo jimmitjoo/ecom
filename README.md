@@ -5,6 +5,7 @@ A robust and scalable API for product management in e-commerce systems, built wi
 ## Features
 
 - RESTful API for CRUD operations on products
+- Batch operations for efficient bulk updates
 - Real-time updates via WebSocket
 - Product data validation
 - In-memory data storage (easily replaceable with other data sources)
@@ -58,20 +59,16 @@ The server will start on `http://localhost:8080`
 
 ## API Usage
 
-### REST Endpoints
+### Single Operations
 
+#### REST Endpoints
 - `GET /products` - List all products
 - `POST /products` - Create new product
 - `GET /products/{id}` - Get specific product
 - `PUT /products/{id}` - Update product
 - `DELETE /products/{id}` - Delete product
 
-### WebSocket
-
-- `ws://localhost:8080/ws` - WebSocket endpoint for real-time updates
-
-### Example Product Creation
-
+#### Example Single Product Creation
 ```bash
 curl -X POST http://localhost:8080/products \
     -H "Content-Type: application/json" \
@@ -95,11 +92,83 @@ curl -X POST http://localhost:8080/products \
     }'
 ```
 
-## Testing WebSocket
+### Batch Operations
 
+#### REST Endpoints
+- `POST /products/batch` - Create multiple products
+- `PUT /products/batch` - Update multiple products
+- `DELETE /products/batch` - Delete multiple products
+
+#### Example Batch Creation
+```bash
+curl -X POST http://localhost:8080/products/batch \
+    -H "Content-Type: application/json" \
+    -d '[
+        {
+            "sku": "TSHIRT-001",
+            "base_title": "Basic T-shirt",
+            "prices": [{
+                "currency": "SEK",
+                "amount": 299.00
+            }],
+            "metadata": [{
+                "market": "SE",
+                "title": "Basic T-shirt"
+            }]
+        },
+        {
+            "sku": "TSHIRT-002",
+            "base_title": "Premium T-shirt",
+            "prices": [{
+                "currency": "SEK",
+                "amount": 399.00
+            }],
+            "metadata": [{
+                "market": "SE",
+                "title": "Premium T-shirt"
+            }]
+        }
+    ]'
+```
+
+#### Example Batch Deletion
+```bash
+curl -X DELETE http://localhost:8080/products/batch \
+    -H "Content-Type: application/json" \
+    -d '["prod_123", "prod_456"]'
+```
+
+#### Batch Operation Response Format
+```json
+[
+    {
+        "success": true,
+        "id": "prod_123",
+        "error": ""
+    },
+    {
+        "success": false,
+        "id": "prod_456",
+        "error": "Product not found"
+    }
+]
+```
+
+### Real-time Updates (WebSocket)
+
+- `ws://localhost:8080/ws` - WebSocket endpoint for real-time updates
+- Receives events for all product operations (single and batch)
+- Event types: product.created, product.updated, product.deleted
+
+## Testing
+
+### WebSocket Testing Interface
 1. Open `test/websocket.html` in a browser
-2. Use the interface to create, update and delete products
-3. See real-time updates in the browser
+2. Use the interface to:
+   - Create individual or batch products
+   - View and select products
+   - Delete individual or multiple products
+   - See real-time updates for all operations
 
 ## Architecture
 
