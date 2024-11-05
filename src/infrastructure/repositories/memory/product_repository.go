@@ -10,7 +10,7 @@ import (
 // ProductRepository implements an in-memory product repository
 type ProductRepository struct {
 	products map[string]*models.Product
-	mu       sync.RWMutex // Mutex för att skydda map-operationer
+	mu       sync.RWMutex // Mutex to protect map-operations
 }
 
 // NewProductRepository creates a new in-memory product repository
