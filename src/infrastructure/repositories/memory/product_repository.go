@@ -5,18 +5,21 @@ import (
 
 	"github.com/jimmitjoo/ecom/src/domain/models"
 	"github.com/jimmitjoo/ecom/src/domain/repositories"
+	eventstore "github.com/jimmitjoo/ecom/src/infrastructure/events/memory"
 )
 
 // ProductRepository implements an in-memory product repository
 type ProductRepository struct {
-	products map[string]*models.Product
-	mu       sync.RWMutex // Mutex to protect map-operations
+	products   map[string]*models.Product
+	eventStore *eventstore.MemoryEventStore
+	mu         sync.RWMutex // Mutex to protect map-operations
 }
 
 // NewProductRepository creates a new in-memory product repository
 func NewProductRepository() repositories.ProductRepository {
 	return &ProductRepository{
-		products: make(map[string]*models.Product),
+		products:   make(map[string]*models.Product),
+		eventStore: eventstore.NewMemoryEventStore(),
 	}
 }
 
@@ -70,4 +73,12 @@ func (r *ProductRepository) List() ([]*models.Product, error) {
 		products = append(products, product)
 	}
 	return products, nil
+}
+
+func (r *ProductRepository) GetEventsByProductID(productID string, fromVersion int64) ([]*models.Event, error) {
+	return r.eventStore.GetEvents(productID, fromVersion)
+}
+
+func (r *ProductRepository) StoreEvent(event *models.Event) error {
+	return r.eventStore.StoreEvent(event)
 }

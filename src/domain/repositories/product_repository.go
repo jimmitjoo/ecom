@@ -18,4 +18,6 @@ type ProductRepository interface {
 	Update(product *models.Product) error
 	Delete(id string) error
 	List() ([]*models.Product, error)
+	GetEventsByProductID(productID string, fromVersion int64) ([]*models.Event, error)
+	StoreEvent(event *models.Event) error
 }

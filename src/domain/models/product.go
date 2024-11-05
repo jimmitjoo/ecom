@@ -1,6 +1,9 @@
 package models
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -45,9 +48,25 @@ type Product struct {
 	Metadata    []MarketMetadata `json:"metadata" validate:"required,dive"`
 	CreatedAt   time.Time        `json:"created_at"`
 	UpdatedAt   time.Time        `json:"updated_at"`
+	Version     int64            `json:"version"`   // Version number for optimistic locking
+	LastHash    string           `json:"last_hash"` // Hash of last known state
 }
 
 func ValidateProduct(product *Product) error {
 	validate := validator.New()
 	return validate.Struct(product)
+}
+
+// CalculateHash generates a hash of the product's current state
+func (p *Product) CalculateHash() string {
+	// Använd den befintliga calculateHash-funktionen från service-lagret
+	data, _ := json.Marshal(p)
+	hash := sha256.Sum256(data)
+	return hex.EncodeToString(hash[:])
+}
+
+// UpdateVersion increments the version and updates the hash
+func (p *Product) UpdateVersion() {
+	p.Version++
+	p.LastHash = p.CalculateHash()
 }

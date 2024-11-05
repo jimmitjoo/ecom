@@ -2,6 +2,77 @@
 
 A robust and scalable API for product management in e-commerce systems, built with Go following clean architecture principles.
 
+## Use Cases & Benefits
+
+### Multi-Market Product Management
+Perfect for businesses operating across multiple markets where:
+- Products need different pricing per market
+- Product information requires localization
+- Stock levels vary by location
+- Variants need market-specific attributes
+
+### Real-time Inventory Management
+Ideal for businesses requiring immediate stock updates:
+- Live inventory tracking across warehouses
+- Instant stock level notifications
+- Real-time availability updates
+- Automated stock threshold alerts
+
+### Batch Operations for Scale
+Designed for operations requiring bulk updates:
+- Mass product imports
+- Seasonal price updates
+- Inventory reconciliation
+- Bulk product modifications
+
+### Event-Driven Architecture
+Enables building reactive systems with:
+- Real-time product updates
+- Event-based integrations
+- Audit trail capabilities
+- Automated workflows
+
+### Why Choose This Solution?
+
+1. **Performance & Scalability**
+   - Concurrent processing of batch operations
+     * Configurable batch sizes (default max: 1000 items)
+     * Parallel processing with worker pools
+     * Progress tracking for large operations
+   
+   - Efficient in-memory data storage
+     * Sub-millisecond read operations
+     * O(1) lookup complexity
+     * Easy migration path to persistent storage
+   
+   - Non-blocking event publishing
+     * Async event emission
+     * Buffered channels for event handling
+     * Configurable event buffer sizes
+   
+   - Thread-safe implementations
+     * Mutex-protected shared resources
+     * Atomic operations where applicable
+     * Lock-free algorithms for high concurrency
+
+2. **Reliability & Consistency**
+   - Guaranteed event ordering
+   - Idempotent operations
+   - Automatic retry mechanisms
+   - Transaction-like batch operations
+
+3. **Flexibility & Extensibility**
+   - Clean architecture for easy modifications
+   - Pluggable storage implementations
+   - Event-driven for loose coupling
+   - Modular design
+
+4. **Developer Experience**
+   - Clear API documentation
+   - Consistent error handling
+   - WebSocket testing interface
+   - Comprehensive examples
+
 ## Features
 
 - RESTful API for CRUD operations on products
