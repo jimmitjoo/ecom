@@ -69,9 +69,18 @@ cd ecom
 go mod download
 ```
 
-3. Start the server:
+3. Install Air for hot-reloading (optional):
 ```bash
+go install github.com/air-verse/air@latest
+```
+
+4. Start the server:
+```bash
+# Without hot-reloading
 go run src/main.go
+
+# With hot-reloading
+air
 ```
 
 The server will start on `http://localhost:8080`
@@ -118,6 +127,17 @@ The project follows clean architecture principles:
 - Event-based state reconstruction
 - Conflict resolution strategies
 - Consistency guarantees
+
+### Development Tools
+
+#### Hot Reloading
+The project supports hot-reloading using Air, which automatically rebuilds and restarts the application when file changes are detected. This significantly improves the development experience.
+
+To use hot-reloading:
+1. Install Air: `go install github.com/air-verse/air@latest`
+2. Run the server with Air: `air`
+
+Air will monitor your source files and automatically rebuild when changes are detected.
 
 ## Monitoring & Observability
 
