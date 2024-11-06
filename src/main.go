@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/jimmitjoo/ecom/src/application/services"
 	"github.com/jimmitjoo/ecom/src/infrastructure/events/memory"
@@ -113,6 +114,16 @@ func main() {
 	log.Printf("LockManager initialized: %v", lockManager != nil)
 	log.Printf("ProductService initialized: %v", productService != nil)
 	log.Printf("ProductHandler initialized: %v", productHandler != nil)
+
+	// Lägg till efter repo-initieringen:
+	profilingHandler := handlers.NewProfilingHandler()
+
+	// Lägg till profiling routes (endast tillgängliga i development mode)
+	if os.Getenv("GO_ENV") == "development" {
+		r.HandleFunc("/debug/pprof/cpu", profilingHandler.CPUProfile)
+		r.HandleFunc("/debug/pprof/heap", profilingHandler.HeapProfile)
+		r.HandleFunc("/debug/pprof/goroutine", profilingHandler.GoroutineProfile)
+	}
 
 	log.Printf("Server starting on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", handler))

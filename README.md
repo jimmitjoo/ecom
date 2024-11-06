@@ -155,6 +155,39 @@ To use hot-reloading:
 
 Air will monitor your source files and automatically rebuild when changes are detected.
 
+#### Performance Profiling
+In development mode, the following profiling endpoints are available:
+
+- `/debug/pprof/cpu` - CPU profiling data
+- `/debug/pprof/heap` - Heap memory profiling
+- `/debug/pprof/goroutine` - Goroutine profiling
+
+Use with Go's built-in tools:
+```bash
+# CPU Profiling
+go tool pprof http://localhost:8080/debug/pprof/cpu
+
+# Heap Profiling
+go tool pprof http://localhost:8080/debug/pprof/heap
+
+# Goroutine Profiling
+go tool pprof http://localhost:8080/debug/pprof/goroutine
+```
+
+For visualization, use the `-http` flag:
+```bash
+go tool pprof -http=:8081 http://localhost:8080/debug/pprof/heap
+```
+
+This provides:
+1. Built-in profiling with Go's pprof
+2. Secure access (development mode only)
+3. Real-time analysis of:
+   - CPU usage
+   - Memory allocation
+   - Goroutine management
+4. Visual profiling data tools
+
 ## Monitoring & Observability
 
 ### Metrics (Prometheus)
