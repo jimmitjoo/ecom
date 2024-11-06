@@ -34,6 +34,10 @@ func NewMemoryLockManager() *MemoryLockManager {
 }
 
 func (m *MemoryLockManager) AcquireLock(ctx context.Context, resourceID string, ttl time.Duration) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -42,10 +46,11 @@ func (m *MemoryLockManager) AcquireLock(ctx context.Context, resourceID string, 
 		if now.Before(lock.expiresAt) {
 			return false, nil
 		}
+		delete(m.locks, resourceID)
 	}
 
 	m.locks[resourceID] = &Lock{
-		owner:     "owner", // In a distributed system, this would be a unique node ID
+		owner:     "owner",
 		expiresAt: now.Add(ttl),
 	}
 	return true, nil
@@ -58,8 +63,19 @@ func (m *MemoryLockManager) ReleaseLock(resourceID string) error {
 	return nil
 }
 
+func (m *MemoryLockManager) RefreshLock(resourceID string, ttl time.Duration) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if lock, exists := m.locks[resourceID]; exists {
+		lock.expiresAt = time.Now().Add(ttl)
+		return nil
+	}
+	return nil
+}
+
 func (m *MemoryLockManager) cleanupExpiredLocks() {
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
@@ -77,4 +93,8 @@ func (m *MemoryLockManager) cleanupExpiredLocks() {
 			return
 		}
 	}
+}
+
+func (m *MemoryLockManager) Close() {
+	close(m.cleanupC)
 }
