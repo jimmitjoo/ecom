@@ -170,6 +170,20 @@ Air will monitor your source files and automatically rebuild when changes are de
 - Performance metrics
 - Audit trail
 
+#### Development Mode Logging
+I utvecklingsläge aktiveras detaljerad loggning automatiskt med:
+- Färgkodade loggnivåer för bättre läsbarhet
+- Automatisk stack trace vid fel
+- Request ID för varje anrop
+- Detaljerad timing för alla operationer
+- Källkodsinformation (fil och rad)
+- Utökad kontextuell information
+
+För att aktivera development logging:
+```bash
+export GO_ENV=development
+```
+
 ### Distributed Tracing (OpenTelemetry)
 - End-to-end request tracing
 - Cross-service correlation

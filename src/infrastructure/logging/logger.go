@@ -2,9 +2,9 @@ package logging
 
 import (
 	"context"
+	"os"
 
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 type contextKey string
@@ -18,17 +18,22 @@ type Logger struct {
 
 // NewLogger creates a new structured logger
 func NewLogger() (*Logger, error) {
-	config := zap.NewProductionConfig()
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	env := os.Getenv("GO_ENV")
 
-	zapLogger, err := config.Build(
-		zap.AddCallerSkip(1),
-		zap.AddStacktrace(zapcore.ErrorLevel),
-	)
+	if env == "development" {
+		return NewDevelopmentLogger()
+	}
+
+	return NewProductionLogger()
+}
+
+// NewProductionLogger creates a new production logger
+func NewProductionLogger() (*Logger, error) {
+	config := zap.NewProductionConfig()
+	zapLogger, err := config.Build()
 	if err != nil {
 		return nil, err
 	}
-
 	return &Logger{Logger: zapLogger}, nil
 }
 
@@ -43,4 +48,29 @@ func FromContext(ctx context.Context) *Logger {
 		return logger
 	}
 	return &Logger{Logger: zap.NewNop()}
+}
+
+// WithFields adds fields to the logger
+func (l *Logger) WithFields(fields ...zap.Field) *Logger {
+	return &Logger{Logger: l.Logger.With(fields...)}
+}
+
+// WithRequestID adds request ID to the logger
+func (l *Logger) WithRequestID(requestID string) *Logger {
+	return l.WithFields(zap.String("request_id", requestID))
+}
+
+// WithTraceID adds trace ID to the logger
+func (l *Logger) WithTraceID(traceID string) *Logger {
+	return l.WithFields(zap.String("trace_id", traceID))
+}
+
+// WithUserID adds user ID to the logger
+func (l *Logger) WithUserID(userID string) *Logger {
+	return l.WithFields(zap.String("user_id", userID))
+}
+
+// WithError adds error to the logger
+func (l *Logger) WithError(err error) *Logger {
+	return l.WithFields(zap.Error(err))
 }

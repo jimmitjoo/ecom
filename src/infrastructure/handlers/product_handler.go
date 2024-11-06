@@ -9,7 +9,10 @@ import (
 	"github.com/jimmitjoo/ecom/src/application/interfaces"
 	"github.com/jimmitjoo/ecom/src/domain/models"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/jimmitjoo/ecom/src/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // ProductHandler handles HTTP requests for product operations
@@ -41,11 +44,37 @@ func (h *ProductHandler) writeError(w http.ResponseWriter, code int, message str
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /products [get]
 func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
+	// Skapa en unik request ID
+	requestID := uuid.New().String()
+
+	// Skapa logger med request context
+	logger, _ := logging.NewLogger()
+	logger = logger.WithRequestID(requestID)
+
+	// Logga start av request processing
+	logger.Debug("Processing request",
+		zap.String("method", r.Method),
+		zap.String("path", r.URL.Path),
+		zap.String("remote_addr", r.RemoteAddr),
+	)
+
+	startTime := time.Now()
 	products, err := h.service.ListProducts()
+	duration := time.Since(startTime)
+
 	if err != nil {
+		logger.Error("Failed to fetch products",
+			zap.Error(err),
+			zap.Duration("duration", duration),
+		)
 		h.writeError(w, http.StatusInternalServerError, "Failed to fetch products")
 		return
 	}
+
+	logger.Debug("Request completed successfully",
+		zap.Int("product_count", len(products)),
+		zap.Duration("duration", duration),
+	)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(products)
@@ -62,25 +91,42 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} handlers.ErrorResponse
 // @Router /products [post]
 func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
+	requestID := uuid.New().String()
+	logger, _ := logging.NewLogger()
+	logger = logger.WithRequestID(requestID)
+
+	logger.Debug("Processing create product request",
+		zap.String("method", r.Method),
+		zap.String("path", r.URL.Path),
+		zap.String("remote_addr", r.RemoteAddr),
+	)
+
+	startTime := time.Now()
 	var product models.Product
 	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
+		logger.Error("Failed to decode request body",
+			zap.Error(err),
+			zap.Duration("duration", time.Since(startTime)),
+		)
 		h.writeError(w, http.StatusBadRequest, "Invalid JSON data")
 		return
 	}
 
-	// Create the product first (which sets ID and timestamps)
 	if err := h.service.CreateProduct(&product); err != nil {
+		logger.Error("Failed to create product",
+			zap.Error(err),
+			zap.String("product_id", product.ID),
+			zap.Duration("duration", time.Since(startTime)),
+		)
 		h.writeError(w, http.StatusInternalServerError, "Failed to create product")
 		return
 	}
 
-	// Validate the complete product after ID has been set
-	if err := models.ValidateProduct(&product); err != nil {
-		// If validation fails, clean up by deleting the product
-		h.service.DeleteProduct(product.ID)
-		h.writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
+	logger.Info("Product created successfully",
+		zap.String("product_id", product.ID),
+		zap.String("sku", product.SKU),
+		zap.Duration("duration", time.Since(startTime)),
+	)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -98,14 +144,36 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {object} handlers.ErrorResponse
 // @Router /products/{id} [get]
 func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
+	requestID := uuid.New().String()
+	logger, _ := logging.NewLogger()
+	logger = logger.WithRequestID(requestID)
+
 	vars := mux.Vars(r)
 	id := vars["id"]
 
+	logger.Debug("Processing get product request",
+		zap.String("method", r.Method),
+		zap.String("path", r.URL.Path),
+		zap.String("product_id", id),
+		zap.String("remote_addr", r.RemoteAddr),
+	)
+
+	startTime := time.Now()
 	product, err := h.service.GetProduct(id)
 	if err != nil {
+		logger.Error("Failed to fetch product",
+			zap.Error(err),
+			zap.String("product_id", id),
+			zap.Duration("duration", time.Since(startTime)),
+		)
 		h.writeError(w, http.StatusNotFound, fmt.Sprintf("Product with ID '%s' not found", id))
 		return
 	}
+
+	logger.Debug("Product fetched successfully",
+		zap.String("product_id", id),
+		zap.Duration("duration", time.Since(startTime)),
+	)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(product)
@@ -123,18 +191,39 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 // @Failure 400,404 {object} handlers.ErrorResponse
 // @Router /products/{id} [put]
 func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
+	requestID := uuid.New().String()
+	logger, _ := logging.NewLogger()
+	logger = logger.WithRequestID(requestID)
+
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	// Hämta först existerande produkt
+	logger.Debug("Processing update product request",
+		zap.String("method", r.Method),
+		zap.String("path", r.URL.Path),
+		zap.String("product_id", id),
+		zap.String("remote_addr", r.RemoteAddr),
+	)
+
+	startTime := time.Now()
 	existingProduct, err := h.service.GetProduct(id)
 	if err != nil {
+		logger.Error("Product not found for update",
+			zap.Error(err),
+			zap.String("product_id", id),
+			zap.Duration("duration", time.Since(startTime)),
+		)
 		h.sendError(w, http.StatusNotFound, fmt.Sprintf("Product with ID '%s' not found", id))
 		return
 	}
 
 	var updatedProduct models.Product
 	if err := json.NewDecoder(r.Body).Decode(&updatedProduct); err != nil {
+		logger.Error("Failed to decode update request body",
+			zap.Error(err),
+			zap.String("product_id", id),
+			zap.Duration("duration", time.Since(startTime)),
+		)
 		h.sendError(w, http.StatusBadRequest, "Invalid JSON data")
 		return
 	}
@@ -149,9 +238,20 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	updatedProduct.UpdatedAt = time.Now()
 
 	if err := h.service.UpdateProduct(&updatedProduct); err != nil {
+		logger.Error("Failed to update product",
+			zap.Error(err),
+			zap.String("product_id", id),
+			zap.Duration("duration", time.Since(startTime)),
+		)
 		h.sendError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to update product: %v", err))
 		return
 	}
+
+	logger.Info("Product updated successfully",
+		zap.String("product_id", id),
+		zap.Int64("version", updatedProduct.Version),
+		zap.Duration("duration", time.Since(startTime)),
+	)
 
 	h.sendSuccess(w, http.StatusOK, updatedProduct)
 }
@@ -190,17 +290,43 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} models.APIError "Internal server error"
 // @Router /products/batch [post]
 func (h *ProductHandler) BatchCreateProducts(w http.ResponseWriter, r *http.Request) {
+	requestID := uuid.New().String()
+	logger, _ := logging.NewLogger()
+	logger = logger.WithRequestID(requestID)
+
+	logger.Debug("Processing batch create request",
+		zap.String("method", r.Method),
+		zap.String("path", r.URL.Path),
+		zap.String("remote_addr", r.RemoteAddr),
+	)
+
+	startTime := time.Now()
 	var products []*models.Product
 	if err := json.NewDecoder(r.Body).Decode(&products); err != nil {
+		logger.Error("Failed to decode batch create request",
+			zap.Error(err),
+			zap.Duration("duration", time.Since(startTime)),
+		)
 		h.writeError(w, http.StatusBadRequest, "Invalid JSON data")
 		return
 	}
 
 	results, err := h.service.BatchCreateProducts(products)
 	if err != nil {
+		logger.Error("Batch create operation failed",
+			zap.Error(err),
+			zap.Int("product_count", len(products)),
+			zap.Duration("duration", time.Since(startTime)),
+		)
 		h.writeError(w, http.StatusInternalServerError, "Failed to create products")
 		return
 	}
+
+	logger.Info("Batch create completed",
+		zap.Int("total_products", len(products)),
+		zap.Int("success_count", len(results)),
+		zap.Duration("duration", time.Since(startTime)),
+	)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

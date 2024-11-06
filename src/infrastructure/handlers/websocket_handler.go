@@ -5,11 +5,15 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/jimmitjoo/ecom/src/domain/events"
 	"github.com/jimmitjoo/ecom/src/domain/models"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/jimmitjoo/ecom/src/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 var upgrader = websocket.Upgrader{
@@ -47,22 +51,45 @@ func (h *WebSocketHandler) writeMessage(conn *websocket.Conn, messageType int, d
 }
 
 func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	requestID := uuid.New().String()
+	logger, _ := logging.NewLogger()
+	logger = logger.WithRequestID(requestID)
+
+	logger.Debug("New WebSocket connection attempt",
+		zap.String("remote_addr", r.RemoteAddr),
+	)
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("Websocket upgrade failed: %v", err)
+		logger.Error("WebSocket upgrade failed",
+			zap.Error(err),
+			zap.String("remote_addr", r.RemoteAddr),
+		)
 		return
 	}
 
 	h.mu.Lock()
 	h.clients[conn] = true
+	clientCount := len(h.clients)
 	h.mu.Unlock()
+
+	logger.Info("New WebSocket client connected",
+		zap.String("remote_addr", r.RemoteAddr),
+		zap.Int("total_clients", clientCount),
+	)
 
 	// Clean up client when connection closes
 	defer func() {
 		h.mu.Lock()
 		delete(h.clients, conn)
+		clientCount := len(h.clients)
 		h.mu.Unlock()
 		conn.Close()
+
+		logger.Info("WebSocket client disconnected",
+			zap.String("remote_addr", r.RemoteAddr),
+			zap.Int("remaining_clients", clientCount),
+		)
 	}()
 
 	// Keep connection open and handle messages
@@ -99,11 +126,31 @@ func (h *WebSocketHandler) subscribeToEvents() {
 }
 
 func (h *WebSocketHandler) broadcastEvent(event *models.Event) {
+	logger, _ := logging.NewLogger()
+
+	startTime := time.Now()
 	data, err := json.Marshal(event)
 	if err != nil {
-		log.Printf("Failed to marshal event: %v", err)
+		logger.Error("Failed to marshal event for broadcast",
+			zap.Error(err),
+			zap.String("event_type", string(event.Type)),
+			zap.String("event_id", event.ID),
+		)
 		return
 	}
+
+	h.mu.RLock()
+	clientCount := len(h.clients)
+	h.mu.RUnlock()
+
+	logger.Debug("Starting event broadcast",
+		zap.String("event_type", string(event.Type)),
+		zap.String("event_id", event.ID),
+		zap.Int("client_count", clientCount),
+	)
+
+	successCount := 0
+	failCount := 0
 
 	h.mu.RLock()
 	clients := make([]*websocket.Conn, 0, len(h.clients))
@@ -119,6 +166,17 @@ func (h *WebSocketHandler) broadcastEvent(event *models.Event) {
 			delete(h.clients, client)
 			h.mu.Unlock()
 			client.Close()
+			failCount++
+		} else {
+			successCount++
 		}
 	}
+
+	logger.Info("Event broadcast completed",
+		zap.String("event_type", string(event.Type)),
+		zap.String("event_id", event.ID),
+		zap.Int("success_count", successCount),
+		zap.Int("fail_count", failCount),
+		zap.Duration("duration", time.Since(startTime)),
+	)
 }
