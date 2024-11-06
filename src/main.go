@@ -13,7 +13,25 @@ import (
 
 	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	_ "github.com/jimmitjoo/ecom/docs" // Detta genereras av swag
+	httpSwagger "github.com/swaggo/http-swagger"
 )
+
+// @title E-commerce Product API
+// @version 1.0
+// @description A robust and scalable API for product management in e-commerce systems
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http ws
 
 func main() {
 	// Create repository instance
@@ -61,6 +79,14 @@ func main() {
 
 	// Use CORS middleware
 	handler := corsMiddleware(r)
+
+	// Swagger documentation
+	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+		httpSwagger.DeepLinking(true),
+		httpSwagger.DocExpansion("none"),
+		httpSwagger.DomID("swagger-ui"),
+	))
 
 	log.Printf("Server starting on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", handler))

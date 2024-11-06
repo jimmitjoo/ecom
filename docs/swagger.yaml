@@ -1,0 +1,365 @@
+basePath: /
+definitions:
+  handlers.ErrorResponse:
+    properties:
+      code:
+        example: 400
+        type: integer
+      message:
+        example: Ogiltig förfrågan
+        type: string
+    type: object
+  models.APIError:
+    properties:
+      message:
+        type: string
+    type: object
+  models.MarketMetadata:
+    properties:
+      description:
+        type: string
+      keywords:
+        type: string
+      market:
+        type: string
+      title:
+        type: string
+    required:
+    - market
+    - title
+    type: object
+  models.Price:
+    properties:
+      amount:
+        minimum: 0
+        type: number
+      currency:
+        type: string
+    required:
+    - amount
+    - currency
+    type: object
+  models.Product:
+    properties:
+      base_title:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      last_hash:
+        description: Hash of last known state
+        type: string
+      metadata:
+        items:
+          $ref: '#/definitions/models.MarketMetadata'
+        type: array
+      prices:
+        items:
+          $ref: '#/definitions/models.Price'
+        type: array
+      sku:
+        type: string
+      updated_at:
+        type: string
+      variants:
+        items:
+          $ref: '#/definitions/models.Variant'
+        type: array
+      version:
+        description: Version number for optimistic locking
+        type: integer
+    required:
+    - base_title
+    - id
+    - metadata
+    - prices
+    - sku
+    type: object
+  models.Stock:
+    properties:
+      location_id:
+        type: string
+      quantity:
+        minimum: 0
+        type: integer
+    required:
+    - location_id
+    type: object
+  models.Variant:
+    properties:
+      attributes:
+        additionalProperties:
+          type: string
+        description: 'e.g. {"size": "XL", "color": "blue"}'
+        type: object
+      id:
+        type: string
+      sku:
+        type: string
+      stock:
+        items:
+          $ref: '#/definitions/models.Stock'
+        type: array
+    required:
+    - attributes
+    - id
+    - sku
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: A robust and scalable API for product management in e-commerce systems
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: E-commerce Product API
+  version: "1.0"
+paths:
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Hämtar en lista över alla produkter
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Lista alla produkter
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Skapar en ny produkt med angivna detaljer
+      parameters:
+      - description: Produktdetaljer
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/models.Product'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Skapa en ny produkt
+      tags:
+      - products
+  /products/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Tar bort en produkt med angivet ID
+      parameters:
+      - description: Produkt ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Ta bort en produkt
+      tags:
+      - products
+    get:
+      consumes:
+      - application/json
+      description: Hämtar en produkt med angivet ID
+      parameters:
+      - description: Produkt ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Hämta en produkt
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      description: Uppdaterar en existerande produkt
+      parameters:
+      - description: Produkt ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Uppdaterade produktdetaljer
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/models.Product'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Uppdatera en produkt
+      tags:
+      - products
+  /products/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes multiple products in a single request by their IDs. Returns
+        results of deletion operations.
+      parameters:
+      - description: Array of product IDs to delete
+        in: body
+        name: productIDs
+        required: true
+        schema:
+          items:
+            type: string
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Map of product IDs to deletion status
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid JSON data
+          schema:
+            $ref: '#/definitions/models.APIError'
+        "404":
+          description: One or more products not found
+          schema:
+            $ref: '#/definitions/models.APIError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.APIError'
+      summary: Batch delete multiple products simultaneously
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Creates multiple products simultaneously in a single request
+      parameters:
+      - description: Array of products to create
+        in: body
+        name: products
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/models.Product'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Array of created products
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+        "400":
+          description: Invalid JSON data
+          schema:
+            $ref: '#/definitions/models.APIError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.APIError'
+      summary: Create multiple products in bulk
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      description: Updates multiple products in a single request. All products must
+        exist and contain valid data.
+      parameters:
+      - description: Array of products to update with their IDs and new data
+        in: body
+        name: products
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/models.Product'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Array of updated products
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+        "400":
+          description: Invalid JSON data or validation errors
+          schema:
+            $ref: '#/definitions/models.APIError'
+        "404":
+          description: One or more products not found
+          schema:
+            $ref: '#/definitions/models.APIError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.APIError'
+      summary: Batch update multiple products simultaneously
+      tags:
+      - products
+schemes:
+- http
+- ws
+swagger: "2.0"
