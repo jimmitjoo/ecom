@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/jimmitjoo/ecom/src/application/interfaces"
 	"github.com/jimmitjoo/ecom/src/domain/models"
@@ -125,26 +126,34 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	var product models.Product
-	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
-		h.writeError(w, http.StatusBadRequest, "Invalid JSON data")
+	// Hämta först existerande produkt
+	existingProduct, err := h.service.GetProduct(id)
+	if err != nil {
+		h.sendError(w, http.StatusNotFound, fmt.Sprintf("Product with ID '%s' not found", id))
 		return
 	}
 
-	// Ensure the ID in the URL matches the product
-	product.ID = id
-	if err := models.ValidateProduct(&product); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+	var updatedProduct models.Product
+	if err := json.NewDecoder(r.Body).Decode(&updatedProduct); err != nil {
+		h.sendError(w, http.StatusBadRequest, "Invalid JSON data")
 		return
 	}
 
-	if err := h.service.UpdateProduct(&product); err != nil {
-		h.writeError(w, http.StatusNotFound, fmt.Sprintf("Product with ID '%s' not found", id))
+	// Använd ID från URL:en, inte från request body
+	updatedProduct.ID = id
+	// Behåll version från existerande produkt
+	updatedProduct.Version = existingProduct.Version
+	// Behåll created_at från existerande produkt
+	updatedProduct.CreatedAt = existingProduct.CreatedAt
+	// Uppdatera updated_at till nu
+	updatedProduct.UpdatedAt = time.Now()
+
+	if err := h.service.UpdateProduct(&updatedProduct); err != nil {
+		h.sendError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to update product: %v", err))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(product)
+	h.sendSuccess(w, http.StatusOK, updatedProduct)
 }
 
 // DeleteProduct godoc

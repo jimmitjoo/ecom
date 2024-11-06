@@ -26,10 +26,11 @@ type productService struct {
 }
 
 // NewProductService creates a new product service instance
-func NewProductService(repo repositories.ProductRepository, publisher events.EventPublisher) interfaces.ProductService {
+func NewProductService(repo repositories.ProductRepository, publisher events.EventPublisher, lockManager locks.LockManager) interfaces.ProductService {
 	return &productService{
 		repo:      repo,
 		publisher: publisher,
+		locks:     lockManager,
 	}
 }
 
@@ -87,33 +88,47 @@ func (s *productService) GetProduct(id string) (*models.Product, error) {
 
 // UpdateProduct updates an existing product and publishes an update event
 func (s *productService) UpdateProduct(product *models.Product) error {
+	if product == nil {
+		return errors.New("product cannot be nil")
+	}
+
+	if product.ID == "" {
+		return errors.New("product ID cannot be empty")
+	}
+
 	ctx := context.Background()
 
+	// Försök låsa produkten
 	acquired, err := s.locks.AcquireLock(ctx, product.ID, 10*time.Second)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to acquire lock: %v", err)
 	}
 	if !acquired {
 		return errors.New("could not acquire lock for update")
 	}
 	defer s.locks.ReleaseLock(product.ID)
 
+	// Hämta current version
 	current, err := s.repo.GetByID(product.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get current product: %v", err)
+	}
+
+	if current == nil {
+		return errors.New("product not found")
 	}
 
 	if product.Version != current.Version {
-		return errors.New("version conflict detected")
+		return fmt.Errorf("version conflict: expected %d, got %d", current.Version, product.Version)
 	}
 
-	// Skapa en kopia av produkten innan vi uppdaterar den
+	// Skapa en kopia av produkten
 	updatedProduct := product.Clone()
 	updatedProduct.Version++
 	updatedProduct.UpdatedAt = time.Now()
 	updatedProduct.LastHash = updatedProduct.CalculateHash()
 
-	// Skapa event med den uppdaterade produkten
+	// Skapa event
 	event := &models.Event{
 		ID:       uuid.New().String(),
 		Type:     models.EventProductUpdated,
@@ -123,9 +138,9 @@ func (s *productService) UpdateProduct(product *models.Product) error {
 		Data: &models.ProductEvent{
 			ProductID: updatedProduct.ID,
 			Action:    "updated",
-			Product:   updatedProduct.Clone(), // Spara en kopia av den uppdaterade produkten
+			Product:   updatedProduct.Clone(),
 			Version:   updatedProduct.Version,
-			PrevHash:  current.LastHash, // Använd current.LastHash som PrevHash
+			PrevHash:  current.LastHash,
 			Changes:   calculateChanges(current, updatedProduct),
 		},
 		Timestamp: time.Now(),
@@ -133,15 +148,15 @@ func (s *productService) UpdateProduct(product *models.Product) error {
 
 	// Spara event först
 	if err := s.repo.StoreEvent(event); err != nil {
-		return err
+		return fmt.Errorf("failed to store event: %v", err)
 	}
 
-	// Sen uppdatera produkten
+	// Uppdatera produkten
 	if err := s.repo.Update(updatedProduct); err != nil {
-		return err
+		return fmt.Errorf("failed to update product: %v", err)
 	}
 
-	// Kopiera tillbaka värdena till original-produkten
+	// Kopiera tillbaka värdena
 	*product = *updatedProduct
 
 	return s.publisher.Publish(event)

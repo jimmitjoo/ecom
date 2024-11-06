@@ -7,6 +7,7 @@ import (
 	"github.com/jimmitjoo/ecom/src/application/services"
 	"github.com/jimmitjoo/ecom/src/infrastructure/events/memory"
 	"github.com/jimmitjoo/ecom/src/infrastructure/handlers"
+	"github.com/jimmitjoo/ecom/src/infrastructure/locks"
 	"github.com/jimmitjoo/ecom/src/infrastructure/middleware"
 	"github.com/jimmitjoo/ecom/src/infrastructure/ratelimit"
 	memoryRepo "github.com/jimmitjoo/ecom/src/infrastructure/repositories/memory"
@@ -40,11 +41,14 @@ func main() {
 	// Create event publisher
 	publisher := memory.NewMemoryEventPublisher()
 
-	// Create service with repository and publisher
-	service := services.NewProductService(repo, publisher)
+	// Create lock manager
+	lockManager := locks.NewMemoryLockManager()
+
+	// Create product service
+	productService := services.NewProductService(repo, publisher, lockManager)
 
 	// Create handlers
-	productHandler := handlers.NewProductHandler(service)
+	productHandler := handlers.NewProductHandler(productService)
 	wsHandler := handlers.NewWebSocketHandler(publisher)
 
 	// Set up router
@@ -70,16 +74,6 @@ func main() {
 	// WebSocket endpoint
 	r.HandleFunc("/ws", wsHandler.HandleWebSocket)
 
-	// CORS configuration
-	corsMiddleware := gorillaHandlers.CORS(
-		gorillaHandlers.AllowedOrigins([]string{"*"}),
-		gorillaHandlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
-	)
-
-	// Use CORS middleware
-	handler := corsMiddleware(r)
-
 	// Swagger documentation
 	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
@@ -87,6 +81,38 @@ func main() {
 		httpSwagger.DocExpansion("none"),
 		httpSwagger.DomID("swagger-ui"),
 	))
+
+	// CORS configuration
+	corsMiddleware := gorillaHandlers.CORS(
+		gorillaHandlers.AllowedOrigins([]string{"*"}),
+		gorillaHandlers.AllowedMethods([]string{
+			"GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD",
+		}),
+		gorillaHandlers.AllowedHeaders([]string{
+			"Content-Type",
+			"Authorization",
+			"X-Requested-With",
+			"Access-Control-Allow-Origin",
+			"Access-Control-Allow-Methods",
+			"Access-Control-Allow-Headers",
+			"Origin",
+			"Accept",
+		}),
+		gorillaHandlers.ExposedHeaders([]string{
+			"Content-Length",
+			"Access-Control-Allow-Origin",
+		}),
+		gorillaHandlers.AllowCredentials(),
+	)
+
+	// Use CORS middleware
+	handler := corsMiddleware(r)
+
+	log.Printf("Repository initialized: %v", repo != nil)
+	log.Printf("Publisher initialized: %v", publisher != nil)
+	log.Printf("LockManager initialized: %v", lockManager != nil)
+	log.Printf("ProductService initialized: %v", productService != nil)
+	log.Printf("ProductHandler initialized: %v", productHandler != nil)
 
 	log.Printf("Server starting on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", handler))
