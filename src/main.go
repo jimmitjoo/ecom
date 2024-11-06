@@ -7,6 +7,8 @@ import (
 	"github.com/jimmitjoo/ecom/src/application/services"
 	"github.com/jimmitjoo/ecom/src/infrastructure/events/memory"
 	"github.com/jimmitjoo/ecom/src/infrastructure/handlers"
+	"github.com/jimmitjoo/ecom/src/infrastructure/middleware"
+	"github.com/jimmitjoo/ecom/src/infrastructure/ratelimit"
 	memoryRepo "github.com/jimmitjoo/ecom/src/infrastructure/repositories/memory"
 
 	gorillaHandlers "github.com/gorilla/handlers"
@@ -29,6 +31,11 @@ func main() {
 
 	// Set up router
 	r := mux.NewRouter()
+
+	// Set up rate limiter
+	limiter := ratelimit.NewTokenBucketLimiter(10, 10) // 10 tokens/sec, max 10 tokens
+	rateLimitMiddleware := middleware.RateLimitMiddleware(limiter)
+	r.Use(rateLimitMiddleware)
 
 	// Batch endpoints (must come before specific product endpoints)
 	r.HandleFunc("/products/batch", productHandler.BatchCreateProducts).Methods("POST")
