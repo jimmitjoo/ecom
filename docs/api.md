@@ -101,6 +101,7 @@ Common HTTP status codes:
 - `400` - Invalid request data
 - `404` - Resource not found
 - `409` - Version conflict
+- `429` - Rate limit exceeded
 - `500` - Internal server error
 
 ### Performance Considerations
@@ -138,6 +139,10 @@ Common HTTP status codes:
    
    # Batch operation size
    batch_operation_size_bucket{le="100"}
+   
+   # Rate limiting
+   rate_limit_exceeded_total{endpoint="/products"}
+   rate_limit_remaining{ip="192.168.1.1"}
    ```
 
 2. **Logging**
@@ -259,4 +264,30 @@ curl -X PUT http://localhost:8080/products/prod_123 \
    - Monitor system resources
    - Review slow queries
    - Analyze trace data
+
+### Rate Limiting
+
+Requests are rate limited per IP address. The API uses a sliding window algorithm to track request counts.
+
+Response headers include rate limit information:
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1614556800
+```
+
+When rate limit is exceeded, the API returns:
+```json
+{
+    "error": "Rate limit exceeded",
+    "retry_after": 45
+}
+```
+
+Default limits:
+- Regular endpoints: 100 requests per minute
+- Batch operations: 20 requests per minute
+- WebSocket connections: 5 concurrent connections per IP
+
+Rate limits can be configured per endpoint and client if needed. Contact support for custom limits.
 

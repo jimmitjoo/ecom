@@ -24,7 +24,10 @@ A robust and scalable API for product management in e-commerce systems, built wi
 
 ### Security
 - Input validation with custom rules
-- Rate limiting per client
+- Advanced rate limiting with sliding window algorithm
+  - Per-IP tracking
+  - Configurable limits per endpoint
+  - Automatic recovery
 - CORS with configurable origins
 - Secure WebSocket connections
 
