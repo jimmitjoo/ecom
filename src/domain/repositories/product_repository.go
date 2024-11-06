@@ -1,17 +1,8 @@
 package repositories
 
-import (
-	"errors"
+import "github.com/jimmitjoo/ecom/src/domain/models"
 
-	"github.com/jimmitjoo/ecom/src/domain/models"
-)
-
-var (
-	// ErrProductNotFound is returned when a product cannot be found
-	ErrProductNotFound = errors.New("product not found")
-)
-
-// ProductRepository defines the interface for product storage operations
+// ProductRepository defines the interface for product storage
 type ProductRepository interface {
 	Create(product *models.Product) error
 	GetByID(id string) (*models.Product, error)

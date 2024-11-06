@@ -37,7 +37,7 @@ func (r *ProductRepository) GetByID(id string) (*models.Product, error) {
 	defer r.mu.RUnlock()
 	product, exists := r.products[id]
 	if !exists {
-		return nil, repositories.ErrProductNotFound
+		return nil, models.ErrProductNotFound
 	}
 	return product, nil
 }
@@ -47,7 +47,7 @@ func (r *ProductRepository) Update(product *models.Product) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, exists := r.products[product.ID]; !exists {
-		return repositories.ErrProductNotFound
+		return models.ErrProductNotFound
 	}
 	r.products[product.ID] = product
 	return nil
@@ -58,7 +58,7 @@ func (r *ProductRepository) Delete(id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, exists := r.products[id]; !exists {
-		return repositories.ErrProductNotFound
+		return models.ErrProductNotFound
 	}
 	delete(r.products, id)
 	return nil
