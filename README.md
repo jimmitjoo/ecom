@@ -85,9 +85,25 @@ air
 
 The server will start on `http://localhost:8080`
 
-## Documentation
+## API Documentation
 
-For detailed API documentation, including endpoints, request/response formats, and examples, see [API Documentation](docs/api.md).
+API dokumentationen finns tillgänglig på:
+- Swagger UI: `http://localhost:8080/swagger/index.html`
+- OpenAPI JSON: `http://localhost:8080/swagger/doc.json`
+- OpenAPI YAML: `http://localhost:8080/swagger/doc.yaml`
+
+Dokumentationen genereras automatiskt från kodens kommentarer. För att uppdatera:
+
+```bash
+swag init -g src/main.go
+```
+
+Detta kommer att:
+- Automatiskt generera OpenAPI/Swagger dokumentation från dina kodkommentarer
+- Ge en interaktiv Swagger UI för att testa API:et
+- Dokumentera både REST endpoints och WebSocket-anslutningar
+- Uppdateras automatiskt när du kör `swag init`
+
 
 ## Development
 
