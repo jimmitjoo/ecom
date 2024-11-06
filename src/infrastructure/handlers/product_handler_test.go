@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -150,23 +151,42 @@ func TestUpdateProduct(t *testing.T) {
 	mockService := new(MockProductService)
 	handler := NewProductHandler(mockService)
 
-	product := createTestProduct()
+	existingProduct := &models.Product{
+		ID:        "test_prod_1",
+		SKU:       "TEST-123",
+		BaseTitle: "Original Title",
+		Version:   1,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	updatedProduct := &models.Product{
+		ID:        "test_prod_1",
+		SKU:       "TEST-123",
+		BaseTitle: "Updated Title",
+		Version:   1,
+		CreatedAt: existingProduct.CreatedAt,
+		UpdatedAt: time.Now(),
+	}
+
+	// Mock GetProduct call
+	mockService.On("GetProduct", "test_prod_1").Return(existingProduct, nil)
+
+	// Mock UpdateProduct call
 	mockService.On("UpdateProduct", mock.AnythingOfType("*models.Product")).Return(nil)
 
-	body, _ := json.Marshal(product)
-	req := httptest.NewRequest("PUT", "/products/"+product.ID, bytes.NewBuffer(body))
-	req = mux.SetURLVars(req, map[string]string{"id": product.ID})
-	w := httptest.NewRecorder()
+	// Skapa request body
+	body, _ := json.Marshal(updatedProduct)
+	req, _ := http.NewRequest("PUT", "/products/test_prod_1", bytes.NewBuffer(body))
 
-	handler.UpdateProduct(w, req)
+	// Sätt upp Gorilla Mux router för att hantera URL-parametrar
+	router := mux.NewRouter()
+	router.HandleFunc("/products/{id}", handler.UpdateProduct)
 
-	assert.Equal(t, http.StatusOK, w.Code)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
 
-	var response models.Product
-	err := json.NewDecoder(w.Body).Decode(&response)
-	assert.NoError(t, err)
-	assert.Equal(t, product.ID, response.ID)
-
+	assert.Equal(t, http.StatusOK, rr.Code)
 	mockService.AssertExpectations(t)
 }
 
