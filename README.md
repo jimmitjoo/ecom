@@ -267,6 +267,30 @@ Features:
 go test -bench=.
 ```
 
+4. Load Testing & Benchmarking
+```bash
+# Run all benchmark tests
+go test -bench=. ./src/testing/load/...
+
+# For detailed output with memory information
+go test -bench=. -benchmem ./src/testing/load/...
+
+# To run a specific benchmark
+go test -bench=BenchmarkBatchOperations ./src/testing/load/...
+```
+
+The benchmark tests include:
+- Batch operations with various sizes (10, 100, 1000 products)
+- Sequential and parallel operations
+- Performance measurements for:
+  - Small batches (10 products)
+  - Medium batches (100 products)
+  - Large batches (1000 products)
+- Automatic measurement of:
+  - Operations per second
+  - Memory allocation
+  - Allocation frequency
+
 ## Contributing
 
 1. Fork the repository
