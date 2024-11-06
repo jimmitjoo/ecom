@@ -4,8 +4,8 @@ import "github.com/jimmitjoo/ecom/src/domain/models"
 
 // BatchResult represents the result of a batch operation
 type BatchResult struct {
-	Success bool   `json:"success"`
 	ID      string `json:"id"`
+	Success bool   `json:"success"`
 	Error   string `json:"error,omitempty"`
 }
 
