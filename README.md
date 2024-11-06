@@ -144,7 +144,64 @@ The project follows clean architecture principles:
 - Conflict resolution strategies
 - Consistency guarantees
 
+#### Monitoring & Observability
+
+##### Metrics (Prometheus)
+- Request latency histograms
+- Operation counters by type
+- WebSocket connection metrics
+- Event processing metrics
+- Repository operation latency
+
+##### Structured Logging (Zap)
+- Request/response logging
+- Error tracking
+- Performance metrics
+- Audit trail
+
+##### Development Mode Logging
+I utvecklingsläge aktiveras detaljerad loggning automatiskt med:
+- Färgkodade loggnivåer för bättre läsbarhet
+- Automatisk stack trace vid fel
+- Request ID för varje anrop
+- Detaljerad timing för alla operationer
+- Källkodsinformation (fil och rad)
+- Utökad kontextuell information
+
+För att aktivera development logging:
+```bash
+export GO_ENV=development
+```
+
+##### Distributed Tracing (OpenTelemetry)
+- End-to-end request tracing
+- Cross-service correlation
+- Performance bottleneck analysis
+- Error propagation tracking
+
 ### Development Tools
+
+#### Test Data Generator
+The project includes a built-in test data generator accessible through the WebSocket test interface (`test/websocket.html`). This tool provides:
+
+- Quick generation of test products with realistic data
+- Support for batch generation (1-50 products at once)
+- Multi-market and multi-currency test data
+- Randomized but valid product attributes
+
+To use the generator:
+1. Start the server
+2. Open `test/websocket.html` in your browser
+3. Use the generator controls to create test data:
+   - Generate single products
+   - Generate batch products (5, 20, or random amount)
+   - Automatic WebSocket updates for generated products
+
+The generator automatically creates products with:
+- Unique SKU numbers
+- Randomized prices in multiple currencies (SEK, NOK, DKK, EUR)
+- Market-specific metadata (SE, NO, DK, FI)
+- Realistic titles and descriptions
 
 #### Hot Reloading
 The project supports hot-reloading using Air, which automatically rebuilds and restarts the application when file changes are detected. This significantly improves the development experience.
@@ -188,40 +245,6 @@ This provides:
    - Goroutine management
 4. Visual profiling data tools
 
-## Monitoring & Observability
-
-### Metrics (Prometheus)
-- Request latency histograms
-- Operation counters by type
-- WebSocket connection metrics
-- Event processing metrics
-- Repository operation latency
-
-### Structured Logging (Zap)
-- Request/response logging
-- Error tracking
-- Performance metrics
-- Audit trail
-
-#### Development Mode Logging
-I utvecklingsläge aktiveras detaljerad loggning automatiskt med:
-- Färgkodade loggnivåer för bättre läsbarhet
-- Automatisk stack trace vid fel
-- Request ID för varje anrop
-- Detaljerad timing för alla operationer
-- Källkodsinformation (fil och rad)
-- Utökad kontextuell information
-
-För att aktivera development logging:
-```bash
-export GO_ENV=development
-```
-
-### Distributed Tracing (OpenTelemetry)
-- End-to-end request tracing
-- Cross-service correlation
-- Performance bottleneck analysis
-- Error propagation tracking
 ### Testing
 
 1. Unit Tests
@@ -229,10 +252,15 @@ export GO_ENV=development
 go test ./...
 ```
 
-2. WebSocket Testing Interface
+2. Integration Testing with WebSocket Interface
 ```bash
 open test/websocket.html
 ```
+Features:
+- Real-time WebSocket connection testing
+- Built-in test data generator
+- Visual feedback for all operations
+- Automatic updates for product changes
 
 3. Performance Testing
 ```bash
