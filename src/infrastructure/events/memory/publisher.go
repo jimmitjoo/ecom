@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"reflect"
 	"sync"
 
 	"github.com/jimmitjoo/ecom/src/domain/events"
@@ -48,11 +49,22 @@ func (p *MemoryEventPublisher) Unsubscribe(eventType models.EventType, handler f
 	defer p.mu.Unlock()
 
 	if handlers, exists := p.handlers[eventType]; exists {
-		for i, h := range handlers {
-			if &h == &handler {
-				p.handlers[eventType] = append(handlers[:i], handlers[i+1:]...)
-				break
+		// Skapa en ny slice för handlers
+		newHandlers := make([]func(*models.Event), 0)
+		handlerValue := reflect.ValueOf(handler)
+
+		// Kopiera alla handlers förutom den som ska tas bort
+		for _, h := range handlers {
+			if reflect.ValueOf(h).Pointer() != handlerValue.Pointer() {
+				newHandlers = append(newHandlers, h)
 			}
+		}
+
+		// Uppdatera handlers för denna event typ
+		if len(newHandlers) > 0 {
+			p.handlers[eventType] = newHandlers
+		} else {
+			delete(p.handlers, eventType) // Ta bort hela event typen om det inte finns några handlers kvar
 		}
 	}
 	return nil
