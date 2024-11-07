@@ -87,23 +87,23 @@ The server will start on `http://localhost:8080`
 
 ## API Documentation
 
-API dokumentationen finns tillgänglig på:
+API documentation is available at:
 - Swagger UI: `http://localhost:8080/swagger/index.html`
 - OpenAPI JSON: `http://localhost:8080/swagger/doc.json`
 - OpenAPI YAML: `http://localhost:8080/swagger/doc.yaml`
 
-Dokumentationen genereras automatiskt från kodens kommentarer. För att uppdatera:
+The documentation is automatically generated from code comments. To update:
+
 
 ```bash
 swag init -g src/main.go
 ```
 
-Detta kommer att:
-- Automatiskt generera OpenAPI/Swagger dokumentation från dina kodkommentarer
-- Ge en interaktiv Swagger UI för att testa API:et
-- Dokumentera både REST endpoints och WebSocket-anslutningar
-- Uppdateras automatiskt när du kör `swag init`
-
+This will:
+- Automatically generate OpenAPI/Swagger documentation from code comments
+- Provide an interactive Swagger UI to test the API
+- Document both REST endpoints and WebSocket connections
+- Automatically update when you run `swag init`
 
 ## Development
 
@@ -290,6 +290,47 @@ The benchmark tests include:
   - Operations per second
   - Memory allocation
   - Allocation frequency
+
+5. Chaos Testing
+```bash
+go test ./src/testing/chaos -v -timeout 10m
+```
+
+The project includes comprehensive chaos testing to ensure system resilience:
+
+#### Network Chaos
+- Simulates network latency (100ms-500ms)
+- Packet loss simulation (10%-90% loss rate)
+- Connection timeout scenarios
+- Custom transport layer for HTTP chaos
+
+#### Memory Pressure Testing
+- Simulates high memory usage (up to 80% system memory)
+- Concurrent batch operations under memory pressure
+- Automatic memory cleanup and GC triggering
+- Resource exhaustion scenarios
+
+#### Data Corruption Testing
+- Simulates corrupted JSON payloads
+- Configurable corruption rates (0-100%)
+- Validates system handling of malformed data
+- Tests data integrity checks and error handling
+
+Example chaos test configuration:
+```go
+type ChaosConfig struct {
+    NetworkLatency  time.Duration
+    PacketLossRate  float64
+    MemoryPressure  bool
+    CorruptDataRate float64
+}
+```
+
+The chaos testing suite helps ensure:
+- System resilience under network stress
+- Proper handling of corrupted data
+- Graceful degradation under memory pressure
+- Recovery from various failure scenarios
 
 ## Contributing
 
