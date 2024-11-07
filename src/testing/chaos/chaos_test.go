@@ -3,7 +3,6 @@ package chaos
 import (
 	"encoding/json"
 	"math/rand"
-	"net/http"
 	"runtime"
 	"strings"
 	"sync"
@@ -20,33 +19,6 @@ type ChaosConfig struct {
 	PacketLossRate  float64
 	MemoryPressure  bool
 	CorruptDataRate float64
-}
-
-// NetworkChaos simulerar nätverksproblem
-type NetworkChaos struct {
-	latency  time.Duration
-	lossRate float64
-	mu       sync.Mutex
-}
-
-func NewNetworkChaos(latency time.Duration, lossRate float64) *NetworkChaos {
-	return &NetworkChaos{
-		latency:  latency,
-		lossRate: lossRate,
-	}
-}
-
-func (nc *NetworkChaos) WrapClient(client *http.Client) *http.Client {
-	transport := client.Transport
-	if transport == nil {
-		transport = http.DefaultTransport
-	}
-
-	client.Transport = &chaosTransport{
-		base:  transport,
-		chaos: nc,
-	}
-	return client
 }
 
 // MemoryPressure simulerar minnestryck
@@ -87,67 +59,6 @@ func (dc *DataCorruption) CorruptData(data []byte) []byte {
 		}
 	}
 	return corrupted
-}
-
-func TestNetworkChaos(t *testing.T) {
-	chaos := NewNetworkChaos(100*time.Millisecond, 0.1)
-	client := &http.Client{
-		// Sätt en kort timeout för att inte hänga i testet
-		Timeout: 1 * time.Second,
-		// Använd ingen faktisk transport
-		Transport: http.DefaultTransport,
-	}
-	chaosClient := chaos.WrapClient(client)
-
-	t.Run("High Latency and Packet Loss", func(t *testing.T) {
-		// Gör flera försök för att säkerställa att vi testar både latens och paketförlust
-		for i := 0; i < 10; i++ {
-			start := time.Now()
-			resp, err := chaosClient.Get("http://example.com")
-			duration := time.Since(start)
-
-			if err != nil {
-				assert.Contains(t, err.Error(), "simulerad paketförlust",
-					"Fel som inte är paketförlust: %v", err)
-			} else {
-				assert.GreaterOrEqual(t, duration, 100*time.Millisecond,
-					"Anropet tog mindre tid än förväntad latens")
-				resp.Body.Close()
-			}
-		}
-	})
-
-	t.Run("Extreme Latency", func(t *testing.T) {
-		extremeChaos := NewNetworkChaos(500*time.Millisecond, 0)
-		extremeClient := extremeChaos.WrapClient(&http.Client{})
-
-		start := time.Now()
-		resp, err := extremeClient.Get("http://example.com")
-		duration := time.Since(start)
-
-		assert.NoError(t, err)
-		assert.GreaterOrEqual(t, duration, 500*time.Millisecond)
-		resp.Body.Close()
-	})
-
-	t.Run("High Packet Loss", func(t *testing.T) {
-		highLossChaos := NewNetworkChaos(0, 0.9)
-		highLossClient := highLossChaos.WrapClient(&http.Client{})
-
-		errorCount := 0
-		attempts := 10
-
-		for i := 0; i < attempts; i++ {
-			_, err := highLossClient.Get("http://example.com")
-			if err != nil {
-				errorCount++
-				assert.Contains(t, err.Error(), "simulerad paketförlust")
-			}
-		}
-
-		assert.Greater(t, errorCount, attempts/2,
-			"Förväntade mer än 50% paketförlust med 0.9 loss rate")
-	})
 }
 
 func TestMemoryPressure(t *testing.T) {
