@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"sort"
 	"sync"
 
 	"github.com/jimmitjoo/ecom/src/domain/models"
@@ -74,6 +75,11 @@ func (r *ProductRepository) List(page, pageSize int) ([]*models.Product, int, er
 	for _, product := range r.products {
 		allProducts = append(allProducts, product)
 	}
+
+	// Sortera produkter efter CreatedAt i fallande ordning (nyaste först)
+	sort.Slice(allProducts, func(i, j int) bool {
+		return allProducts[i].CreatedAt.After(allProducts[j].CreatedAt)
+	})
 
 	// Beräkna total antal produkter
 	total := len(allProducts)

@@ -26,7 +26,7 @@ const docTemplate = `{
     "paths": {
         "/products": {
             "get": {
-                "description": "Hämtar en lista över alla produkter",
+                "description": "Hämtar en lista över alla produkter, sorterade efter skapelsedatum i fallande ordning (nyaste först)",
                 "consumes": [
                     "application/json"
                 ],
