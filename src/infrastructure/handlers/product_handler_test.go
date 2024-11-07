@@ -21,9 +21,9 @@ type MockProductService struct {
 	mock.Mock
 }
 
-func (m *MockProductService) ListProducts() ([]*models.Product, error) {
-	args := m.Called()
-	return args.Get(0).([]*models.Product), args.Error(1)
+func (m *MockProductService) ListProducts(page, pageSize int) ([]*models.Product, int, error) {
+	args := m.Called(page, pageSize)
+	return args.Get(0).([]*models.Product), args.Int(1), args.Error(2)
 }
 
 func (m *MockProductService) CreateProduct(product *models.Product) error {
@@ -82,8 +82,13 @@ func TestListProducts(t *testing.T) {
 	mockService := new(MockProductService)
 	handler := NewProductHandler(mockService)
 
-	products := []*models.Product{createTestProduct()}
-	mockService.On("ListProducts").Return(products, nil)
+	products := []*models.Product{
+		{ID: "1", BaseTitle: "Produkt 1"},
+		{ID: "2", BaseTitle: "Produkt 2"},
+	}
+	totalItems := 10
+
+	mockService.On("ListProducts", 1, 10).Return(products, totalItems, nil)
 
 	req := httptest.NewRequest("GET", "/products", nil)
 	w := httptest.NewRecorder()
@@ -92,11 +97,59 @@ func TestListProducts(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	var response []*models.Product
+	var response struct {
+		Data       []*models.Product `json:"data"`
+		Page       int               `json:"page"`
+		PageSize   int               `json:"page_size"`
+		TotalItems int               `json:"total_items"`
+		TotalPages int               `json:"total_pages"`
+	}
 	err := json.NewDecoder(w.Body).Decode(&response)
 	assert.NoError(t, err)
-	assert.Len(t, response, 1)
-	assert.Equal(t, products[0].ID, response[0].ID)
+
+	assert.Equal(t, products, response.Data)
+	assert.Equal(t, 1, response.Page)
+	assert.Equal(t, 10, response.PageSize)
+	assert.Equal(t, totalItems, response.TotalItems)
+	assert.Equal(t, 1, response.TotalPages)
+
+	mockService.AssertExpectations(t)
+}
+
+func TestListProductsWithCustomPagination(t *testing.T) {
+	mockService := new(MockProductService)
+	handler := NewProductHandler(mockService)
+
+	products := []*models.Product{
+		{ID: "1", BaseTitle: "Produkt 1"},
+		{ID: "2", BaseTitle: "Produkt 2"},
+	}
+	totalItems := 20
+
+	mockService.On("ListProducts", 2, 5).Return(products, totalItems, nil)
+
+	req := httptest.NewRequest("GET", "/products?page=2&size=5", nil)
+	w := httptest.NewRecorder()
+
+	handler.ListProducts(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response struct {
+		Data       []*models.Product `json:"data"`
+		Page       int               `json:"page"`
+		PageSize   int               `json:"page_size"`
+		TotalItems int               `json:"total_items"`
+		TotalPages int               `json:"total_pages"`
+	}
+	err := json.NewDecoder(w.Body).Decode(&response)
+	assert.NoError(t, err)
+
+	assert.Equal(t, products, response.Data)
+	assert.Equal(t, 2, response.Page)
+	assert.Equal(t, 5, response.PageSize)
+	assert.Equal(t, totalItems, response.TotalItems)
+	assert.Equal(t, 4, response.TotalPages)
 
 	mockService.AssertExpectations(t)
 }

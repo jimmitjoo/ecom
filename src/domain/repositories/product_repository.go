@@ -8,7 +8,7 @@ type ProductRepository interface {
 	GetByID(id string) (*models.Product, error)
 	Update(product *models.Product) error
 	Delete(id string) error
-	List() ([]*models.Product, error)
+	List(page, pageSize int) ([]*models.Product, int, error)
 	GetEventsByProductID(productID string, fromVersion int64) ([]*models.Event, error)
 	StoreEvent(event *models.Event) error
 }

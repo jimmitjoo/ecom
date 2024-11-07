@@ -65,14 +65,34 @@ func (r *ProductRepository) Delete(id string) error {
 }
 
 // List returns all stored products
-func (r *ProductRepository) List() ([]*models.Product, error) {
+func (r *ProductRepository) List(page, pageSize int) ([]*models.Product, int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	products := make([]*models.Product, 0, len(r.products))
+
+	// Konvertera map till slice för paginering
+	allProducts := make([]*models.Product, 0, len(r.products))
 	for _, product := range r.products {
-		products = append(products, product)
+		allProducts = append(allProducts, product)
 	}
-	return products, nil
+
+	// Beräkna total antal produkter
+	total := len(allProducts)
+
+	// Beräkna start och slut index för paginering
+	start := (page - 1) * pageSize
+	end := start + pageSize
+
+	// Validera start index
+	if start >= total {
+		return []*models.Product{}, total, nil
+	}
+
+	// Justera end index om det går utanför bounds
+	if end > total {
+		end = total
+	}
+
+	return allProducts[start:end], total, nil
 }
 
 // GetEventsByProductID hämtar alla events för en produkt från en given version

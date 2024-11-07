@@ -63,15 +63,28 @@ func (r *MemoryProductRepository) Delete(id string) error {
 	return nil
 }
 
-func (r *MemoryProductRepository) List() ([]*models.Product, error) {
+func (r *MemoryProductRepository) List(page, pageSize int) ([]*models.Product, int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	products := make([]*models.Product, 0, len(r.products))
-	for _, p := range r.products {
-		products = append(products, p)
+	allProducts := make([]*models.Product, 0, len(r.products))
+	for _, product := range r.products {
+		allProducts = append(allProducts, product)
 	}
-	return products, nil
+
+	total := len(allProducts)
+	start := (page - 1) * pageSize
+	end := start + pageSize
+
+	if start >= total {
+		return []*models.Product{}, total, nil
+	}
+
+	if end > total {
+		end = total
+	}
+
+	return allProducts[start:end], total, nil
 }
 
 func (r *MemoryProductRepository) StoreEvent(event *models.Event) error {

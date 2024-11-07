@@ -35,8 +35,8 @@ func NewProductService(repo repositories.ProductRepository, publisher events.Eve
 }
 
 // ListProducts retrieves all products from the repository
-func (s *productService) ListProducts() ([]*models.Product, error) {
-	return s.repo.List()
+func (s *productService) ListProducts(page, pageSize int) ([]*models.Product, int, error) {
+	return s.repo.List(page, pageSize)
 }
 
 // CreateProduct creates a new product and publishes a creation event

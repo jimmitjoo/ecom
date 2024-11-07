@@ -174,9 +174,10 @@ func TestListProducts(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	listed, err := service.ListProducts()
+	listed, total, err := service.ListProducts(1, 10)
 	assert.NoError(t, err)
 	assert.Len(t, listed, 2)
+	assert.Equal(t, 2, total)
 
 	publisher.AssertExpectations(t)
 }

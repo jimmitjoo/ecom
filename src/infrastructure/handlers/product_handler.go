@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jimmitjoo/ecom/src/application/interfaces"
@@ -58,8 +59,22 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 		zap.String("remote_addr", r.RemoteAddr),
 	)
 
+	// Hämta pagineringsparametrar från query
+	page := 1
+	pageSize := 10
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if sizeStr := r.URL.Query().Get("size"); sizeStr != "" {
+		if s, err := strconv.Atoi(sizeStr); err == nil && s > 0 {
+			pageSize = s
+		}
+	}
+
 	startTime := time.Now()
-	products, err := h.service.ListProducts()
+	products, total, err := h.service.ListProducts(page, pageSize)
 	duration := time.Since(startTime)
 
 	if err != nil {
@@ -73,11 +88,28 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 
 	logger.Debug("Request completed successfully",
 		zap.Int("product_count", len(products)),
+		zap.Int("page", page),
+		zap.Int("page_size", pageSize),
+		zap.Int("total", total),
 		zap.Duration("duration", duration),
 	)
 
+	response := struct {
+		Data       []*models.Product `json:"data"`
+		Page       int               `json:"page"`
+		PageSize   int               `json:"page_size"`
+		TotalItems int               `json:"total_items"`
+		TotalPages int               `json:"total_pages"`
+	}{
+		Data:       products,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalItems: total,
+		TotalPages: (total + pageSize - 1) / pageSize,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(products)
+	json.NewEncoder(w).Encode(response)
 }
 
 // CreateProduct godoc

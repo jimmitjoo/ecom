@@ -129,13 +129,44 @@ paths:
       description: Hämtar en lista över alla produkter
       produces:
       - application/json
+      parameters:
+        - in: query
+          name: page
+          type: integer
+          description: Sidnummer (börjar från 1)
+          required: false
+          default: 1
+        - in: query
+          name: size
+          type: integer
+          description: Antal produkter per sida
+          required: false
+          default: 10
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/models.Product'
-            type: array
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/definitions/models.Product'
+              pagination:
+                type: object
+                properties:
+                  current_page:
+                    type: integer
+                    example: 1
+                  page_size:
+                    type: integer
+                    example: 10
+                  total_items:
+                    type: integer
+                    example: 100
+                  total_pages:
+                    type: integer
+                    example: 10
         "500":
           description: Internal Server Error
           schema:

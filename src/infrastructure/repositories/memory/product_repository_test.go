@@ -27,6 +27,27 @@ func createTestProduct() *models.Product {
 	}
 }
 
+func createTestProducts(count int) []*models.Product {
+	products := make([]*models.Product, count)
+	for i := 0; i < count; i++ {
+		products[i] = &models.Product{
+			ID:        fmt.Sprintf("test_prod_%d", i+1),
+			SKU:       fmt.Sprintf("TEST-%d", i+1),
+			BaseTitle: fmt.Sprintf("Test Product %d", i+1),
+			Prices: []models.Price{
+				{Currency: "SEK", Amount: float64(100 + i*10)},
+			},
+			Metadata: []models.MarketMetadata{
+				{Market: "SE", Title: fmt.Sprintf("Test Product %d", i+1), Description: "Test"},
+			},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Version:   1,
+		}
+	}
+	return products
+}
+
 func TestCreateAndGetProduct(t *testing.T) {
 	repo := NewProductRepository()
 	product := createTestProduct()
@@ -125,9 +146,10 @@ func TestListProducts(t *testing.T) {
 	}
 
 	// List all products
-	listed, err := repo.List()
+	listed, total, err := repo.List(1, 10)
 	assert.NoError(t, err)
 	assert.Len(t, listed, len(products))
+	assert.Equal(t, len(products), total)
 }
 
 func TestEventStorage(t *testing.T) {
@@ -273,4 +295,27 @@ func TestEventVersionFiltering(t *testing.T) {
 			assert.GreaterOrEqual(t, event.Version, tc.fromVersion)
 		}
 	}
+}
+
+func TestList(t *testing.T) {
+	repo := NewProductRepository()
+
+	// Skapa några testprodukter
+	products := createTestProducts(5)
+	for _, p := range products {
+		err := repo.Create(p)
+		assert.NoError(t, err)
+	}
+
+	// Testa paginering
+	listed, total, err := repo.List(1, 2)
+	assert.NoError(t, err)
+	assert.Len(t, listed, 2)
+	assert.Equal(t, 5, total)
+
+	// Testa andra sidan
+	listed, total, err = repo.List(2, 2)
+	assert.NoError(t, err)
+	assert.Len(t, listed, 2)
+	assert.Equal(t, 5, total)
 }

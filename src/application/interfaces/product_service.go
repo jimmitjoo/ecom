@@ -11,7 +11,7 @@ type BatchResult struct {
 
 // ProductService defines the interface for product operations
 type ProductService interface {
-	ListProducts() ([]*models.Product, error)
+	ListProducts(page, pageSize int) ([]*models.Product, int, error)
 	CreateProduct(product *models.Product) error
 	GetProduct(id string) (*models.Product, error)
 	UpdateProduct(product *models.Product) error

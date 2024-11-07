@@ -14,3 +14,7 @@ generate-client:
 .PHONY: clean-client
 clean-client:
 	rm -rf src/client/operations src/client/models
+
+.PHONY: generate-swagger
+generate-swagger:
+	swagger generate spec -o ./docs/swagger.json

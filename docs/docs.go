@@ -37,13 +37,55 @@ const docTemplate = `{
                     "products"
                 ],
                 "summary": "Lista alla produkter",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sidnummer (börjar från 1)",
+                        "name": "page",
+                        "in": "query",
+                        "default": 1
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Antal produkter per sida",
+                        "name": "size",
+                        "in": "query",
+                        "default": 10
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.Product"
+                            "type": "object",
+                            "properties": {
+                                "data": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/definitions/models.Product"
+                                    }
+                                },
+                                "pagination": {
+                                    "type": "object",
+                                    "properties": {
+                                        "current_page": {
+                                            "type": "integer",
+                                            "example": 1
+                                        },
+                                        "page_size": {
+                                            "type": "integer",
+                                            "example": 10
+                                        },
+                                        "total_items": {
+                                            "type": "integer",
+                                            "example": 100
+                                        },
+                                        "total_pages": {
+                                            "type": "integer",
+                                            "example": 10
+                                        }
+                                    }
+                                }
                             }
                         }
                     },

@@ -38,9 +38,9 @@ func (m *MockProductRepository) Delete(id string) error {
 	return args.Error(0)
 }
 
-func (m *MockProductRepository) List() ([]*models.Product, error) {
-	args := m.Called()
-	return args.Get(0).([]*models.Product), args.Error(1)
+func (m *MockProductRepository) List(page, pageSize int) ([]*models.Product, int, error) {
+	args := m.Called(page, pageSize)
+	return args.Get(0).([]*models.Product), args.Int(1), args.Error(2)
 }
 
 func (m *MockProductRepository) GetEventsByProductID(productID string, fromVersion int64) ([]*models.Event, error) {
@@ -97,8 +97,8 @@ func TestMockRepositoryUsage(t *testing.T) {
 
 	// Testa List
 	products := []*models.Product{product}
-	repo.On("List").Return(products, nil)
-	listed, err := repo.List()
+	repo.On("List", 1, 10).Return(products, 1, nil)
+	listed, _, err := repo.List(1, 10)
 	assert.NoError(t, err)
 	assert.Len(t, listed, 1)
 

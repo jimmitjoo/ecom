@@ -18,7 +18,12 @@ func setupTestService() (interfaces.ProductService, error) {
 	publisher := memory.NewMemoryEventPublisher()
 	lockManager := memorylocks.NewMemoryLockManager()
 
-	return services.NewProductService(repo, publisher, lockManager), nil
+	service := services.NewProductService(repo, publisher, lockManager)
+	if service == nil {
+		return nil, fmt.Errorf("failed to create product service")
+	}
+
+	return service, nil
 }
 
 func generateLargeProductBatch(count int) []*models.Product {

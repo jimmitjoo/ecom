@@ -5,6 +5,7 @@ import (
 
 	"github.com/jimmitjoo/ecom/src/application/interfaces"
 	"github.com/jimmitjoo/ecom/src/domain/models"
+	"github.com/stretchr/testify/mock"
 )
 
 // TestBatchResultImplementation verifierar att BatchResult har alla nödvändiga fält
@@ -23,70 +24,50 @@ func TestBatchResultImplementation(t *testing.T) {
 
 // MockProductService implementerar ProductService interface för test
 type MockProductService struct {
-	ListProductsFunc        func() ([]*models.Product, error)
-	CreateProductFunc       func(*models.Product) error
-	GetProductFunc          func(string) (*models.Product, error)
-	UpdateProductFunc       func(*models.Product) error
-	DeleteProductFunc       func(string) error
-	BatchCreateProductsFunc func([]*models.Product) ([]*interfaces.BatchResult, error)
-	BatchUpdateProductsFunc func([]*models.Product) ([]*interfaces.BatchResult, error)
-	BatchDeleteProductsFunc func([]string) ([]*interfaces.BatchResult, error)
+	mock.Mock
 }
 
-func (m *MockProductService) ListProducts() ([]*models.Product, error) {
-	if m.ListProductsFunc != nil {
-		return m.ListProductsFunc()
-	}
-	return nil, nil
+func (m *MockProductService) ListProducts(page, pageSize int) ([]*models.Product, int, error) {
+	args := m.Called(page, pageSize)
+	return args.Get(0).([]*models.Product), args.Int(1), args.Error(2)
 }
 
-func (m *MockProductService) CreateProduct(p *models.Product) error {
-	if m.CreateProductFunc != nil {
-		return m.CreateProductFunc(p)
-	}
-	return nil
+func (m *MockProductService) CreateProduct(product *models.Product) error {
+	args := m.Called(product)
+	return args.Error(0)
 }
 
 func (m *MockProductService) GetProduct(id string) (*models.Product, error) {
-	if m.GetProductFunc != nil {
-		return m.GetProductFunc(id)
+	args := m.Called(id)
+	if p, ok := args.Get(0).(*models.Product); ok {
+		return p, args.Error(1)
 	}
-	return nil, nil
+	return nil, args.Error(1)
 }
 
-func (m *MockProductService) UpdateProduct(p *models.Product) error {
-	if m.UpdateProductFunc != nil {
-		return m.UpdateProductFunc(p)
-	}
-	return nil
+func (m *MockProductService) UpdateProduct(product *models.Product) error {
+	args := m.Called(product)
+	return args.Error(0)
 }
 
 func (m *MockProductService) DeleteProduct(id string) error {
-	if m.DeleteProductFunc != nil {
-		return m.DeleteProductFunc(id)
-	}
-	return nil
+	args := m.Called(id)
+	return args.Error(0)
 }
 
 func (m *MockProductService) BatchCreateProducts(products []*models.Product) ([]*interfaces.BatchResult, error) {
-	if m.BatchCreateProductsFunc != nil {
-		return m.BatchCreateProductsFunc(products)
-	}
-	return nil, nil
+	args := m.Called(products)
+	return args.Get(0).([]*interfaces.BatchResult), args.Error(1)
 }
 
 func (m *MockProductService) BatchUpdateProducts(products []*models.Product) ([]*interfaces.BatchResult, error) {
-	if m.BatchUpdateProductsFunc != nil {
-		return m.BatchUpdateProductsFunc(products)
-	}
-	return nil, nil
+	args := m.Called(products)
+	return args.Get(0).([]*interfaces.BatchResult), args.Error(1)
 }
 
 func (m *MockProductService) BatchDeleteProducts(ids []string) ([]*interfaces.BatchResult, error) {
-	if m.BatchDeleteProductsFunc != nil {
-		return m.BatchDeleteProductsFunc(ids)
-	}
-	return nil, nil
+	args := m.Called(ids)
+	return args.Get(0).([]*interfaces.BatchResult), args.Error(1)
 }
 
 // TestProductServiceInterface verifierar att MockProductService implementerar interfacet
