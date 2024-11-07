@@ -6,7 +6,7 @@ definitions:
         example: 400
         type: integer
       message:
-        example: Ogiltig förfrågan
+        example: Invalid request
         type: string
     type: object
   models.APIError:
@@ -126,20 +126,20 @@ paths:
     get:
       consumes:
       - application/json
-      description: Hämtar en lista över alla produkter
+      description: Retrieves a list of all products, sorted by creation date in descending order (newest first)
       produces:
       - application/json
       parameters:
         - in: query
           name: page
           type: integer
-          description: Sidnummer (börjar från 1)
+          description: Page number (starts from 1)
           required: false
           default: 1
         - in: query
           name: size
           type: integer
-          description: Antal produkter per sida
+          description: Number of products per page
           required: false
           default: 10
       responses:
@@ -171,15 +171,15 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Lista alla produkter
+      summary: List all products
       tags:
       - products
     post:
       consumes:
       - application/json
-      description: Skapar en ny produkt med angivna detaljer
+      description: Creates a new product with the specified details
       parameters:
-      - description: Produktdetaljer
+      - description: Product details
         in: body
         name: product
         required: true
@@ -196,16 +196,16 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Skapa en ny produkt
+      summary: Create a new product
       tags:
       - products
   /products/{id}:
     delete:
       consumes:
       - application/json
-      description: Tar bort en produkt med angivet ID
+      description: Deletes a product with the specified ID
       parameters:
-      - description: Produkt ID
+      - description: Product ID
         in: path
         name: id
         required: true
@@ -219,15 +219,15 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Ta bort en produkt
+      summary: Delete a product
       tags:
       - products
     get:
       consumes:
       - application/json
-      description: Hämtar en produkt med angivet ID
+      description: Retrieves a product with the specified ID
       parameters:
-      - description: Produkt ID
+      - description: Product ID
         in: path
         name: id
         required: true
@@ -243,20 +243,20 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Hämta en produkt
+      summary: Get a product
       tags:
       - products
     put:
       consumes:
       - application/json
-      description: Uppdaterar en existerande produkt
+      description: Updates an existing product
       parameters:
-      - description: Produkt ID
+      - description: Product ID
         in: path
         name: id
         required: true
         type: string
-      - description: Uppdaterade produktdetaljer
+      - description: Updated product details
         in: body
         name: product
         required: true
@@ -277,7 +277,7 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Uppdatera en produkt
+      summary: Update a product
       tags:
       - products
   /products/batch:

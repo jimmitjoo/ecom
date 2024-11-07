@@ -34,26 +34,26 @@ func TestPublishAndSubscribe(t *testing.T) {
 	receivedEvents := make([]*models.Event, 0)
 	var mu sync.Mutex
 
-	// Skapa en handler som sparar mottagna events
+	// Create a handler that saves received events
 	handler := func(event *models.Event) {
 		mu.Lock()
 		receivedEvents = append(receivedEvents, event)
 		mu.Unlock()
 	}
 
-	// Prenumerera på events
+	// Subscribe to events
 	err := publisher.Subscribe(models.EventProductCreated, handler)
 	assert.NoError(t, err)
 
-	// Publicera ett event
+	// Publish an event
 	event := createTestProductEvent()
 	err = publisher.Publish(event)
 	assert.NoError(t, err)
 
-	// Vänta lite så att event hinner processas
+	// Wait a little so that the event can be processed
 	time.Sleep(100 * time.Millisecond)
 
-	// Verifiera att eventet togs emot
+	// Verify that the event was received
 	mu.Lock()
 	assert.Len(t, receivedEvents, 1)
 	assert.Equal(t, event.ID, receivedEvents[0].ID)
@@ -66,7 +66,7 @@ func TestMultipleSubscribers(t *testing.T) {
 	var mu sync.Mutex
 	receivedCounts := make(map[string]int)
 
-	// Skapa flera handlers
+	// Create multiple handlers
 	for i := 0; i < 3; i++ {
 		handlerID := string(rune('A' + i))
 		wg.Add(1)
@@ -82,15 +82,15 @@ func TestMultipleSubscribers(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	// Publicera ett event
+	// Publish an event
 	event := createTestProductEvent()
 	err := publisher.Publish(event)
 	assert.NoError(t, err)
 
-	// Vänta på att alla handlers är klara
+	// Wait for all handlers to finish
 	wg.Wait()
 
-	// Verifiera att alla handlers fick eventet
+	// Verify that all handlers received the event
 	mu.Lock()
 	assert.Len(t, receivedCounts, 3)
 	for _, count := range receivedCounts {
@@ -110,22 +110,22 @@ func TestUnsubscribe(t *testing.T) {
 		mu.Unlock()
 	}
 
-	// Prenumerera och avprenumerera
+	// Subscribe and unsubscribe
 	err := publisher.Subscribe(models.EventProductCreated, handler)
 	assert.NoError(t, err)
 
 	err = publisher.Unsubscribe(models.EventProductCreated, handler)
 	assert.NoError(t, err)
 
-	// Publicera ett event
+	// Publish an event
 	event := createTestProductEvent()
 	err = publisher.Publish(event)
 	assert.NoError(t, err)
 
-	// Vänta lite
+	// Wait a little
 	time.Sleep(100 * time.Millisecond)
 
-	// Verifiera att inga events togs emot
+	// Verify that no events were received
 	mu.Lock()
 	assert.Empty(t, receivedEvents)
 	mu.Unlock()
@@ -137,7 +137,7 @@ func TestConcurrentPublishSubscribe(t *testing.T) {
 	var mu sync.Mutex
 	receivedEvents := make(map[string]int)
 
-	// Skapa handlers för olika event typer
+	// Create handlers for different event types
 	eventTypes := []models.EventType{
 		models.EventProductCreated,
 		models.EventProductUpdated,
@@ -154,7 +154,7 @@ func TestConcurrentPublishSubscribe(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	// Publicera events concurrent
+	// Publish events concurrently
 	numEvents := 10
 	for i := 0; i < numEvents; i++ {
 		wg.Add(1)
@@ -170,7 +170,7 @@ func TestConcurrentPublishSubscribe(t *testing.T) {
 	wg.Wait()
 	time.Sleep(100 * time.Millisecond)
 
-	// Verifiera att rätt antal events togs emot
+	// Verify that the correct number of events were received
 	mu.Lock()
 	total := 0
 	for _, count := range receivedEvents {
@@ -185,9 +185,9 @@ func TestEventTypeFiltering(t *testing.T) {
 	var mu sync.Mutex
 	receivedEvents := make(map[models.EventType][]*models.Event)
 
-	// Prenumerera på olika event typer
+	// Subscribe to different event types
 	for _, eventType := range []models.EventType{models.EventProductCreated, models.EventProductUpdated} {
-		et := eventType // Skapa en ny variabel för att undvika closure problem
+		et := eventType // Create a new variable to avoid closure issues
 		handler := func(event *models.Event) {
 			mu.Lock()
 			receivedEvents[et] = append(receivedEvents[et], event)
@@ -197,7 +197,7 @@ func TestEventTypeFiltering(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	// Publicera events av olika typer
+	// Publish events of different types
 	events := []*models.Event{
 		createTestProductEvent(), // Created
 		func() *models.Event {
@@ -219,7 +219,7 @@ func TestEventTypeFiltering(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	// Verifiera att events hamnade i rätt handlers
+	// Verify that events ended up in the correct handlers
 	mu.Lock()
 	assert.Len(t, receivedEvents[models.EventProductCreated], 1)
 	assert.Len(t, receivedEvents[models.EventProductUpdated], 1)
@@ -232,7 +232,7 @@ func TestSubscribeMultipleEventTypes(t *testing.T) {
 	var mu sync.Mutex
 	receivedEvents := make(map[models.EventType][]*models.Event)
 
-	// Prenumerera på olika event typer
+	// Subscribe to different event types
 	eventTypes := []models.EventType{
 		models.EventProductCreated,
 		models.EventProductUpdated,
@@ -250,7 +250,7 @@ func TestSubscribeMultipleEventTypes(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	// Publicera events av varje typ
+	// Publish events of each type
 	for _, eventType := range eventTypes {
 		event := createTestProductEvent()
 		event.Type = eventType
@@ -260,7 +260,7 @@ func TestSubscribeMultipleEventTypes(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	// Verifiera att varje event typ fick rätt antal events
+	// Verify that each event type received the correct number of events
 	mu.Lock()
 	for _, eventType := range eventTypes {
 		assert.Len(t, receivedEvents[eventType], 1,
@@ -286,24 +286,24 @@ func TestUnsubscribeSpecificHandler(t *testing.T) {
 		mu.Unlock()
 	}
 
-	// Prenumerera med båda handlers
+	// Subscribe with both handlers
 	err := publisher.Subscribe(models.EventProductCreated, handler1)
 	assert.NoError(t, err)
 	err = publisher.Subscribe(models.EventProductCreated, handler2)
 	assert.NoError(t, err)
 
-	// Avprenumerera bara handler1
+	// Unsubscribe only handler1
 	err = publisher.Unsubscribe(models.EventProductCreated, handler1)
 	assert.NoError(t, err)
 
-	// Publicera ett event
+	// Publish an event
 	event := createTestProductEvent()
 	err = publisher.Publish(event)
 	assert.NoError(t, err)
 
 	time.Sleep(100 * time.Millisecond)
 
-	// Verifiera att bara handler2 fick eventet
+	// Verify that only handler2 received the event
 	mu.Lock()
 	assert.Equal(t, 0, count1, "Handler1 should not receive events after unsubscribe")
 	assert.Equal(t, 1, count2, "Handler2 should still receive events")
@@ -321,11 +321,11 @@ func TestPublishToNonexistentEventType(t *testing.T) {
 		mu.Unlock()
 	}
 
-	// Prenumerera på en event typ
+	// Subscribe to an event type
 	err := publisher.Subscribe(models.EventProductCreated, handler)
 	assert.NoError(t, err)
 
-	// Publicera till en annan event typ
+	// Publish to a different event type
 	event := createTestProductEvent()
 	event.Type = models.EventProductUpdated
 	err = publisher.Publish(event)
@@ -333,7 +333,7 @@ func TestPublishToNonexistentEventType(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	// Verifiera att inga events togs emot
+	// Verify that no events were received
 	mu.Lock()
 	assert.Equal(t, 0, receivedEvents, "Should not receive events for unsubscribed type")
 	mu.Unlock()
@@ -345,7 +345,7 @@ func TestConcurrentSubscribeUnsubscribe(t *testing.T) {
 	receivedEvents := make(map[int]int)
 	var mu sync.Mutex
 
-	// Skapa och hantera flera handlers concurrent
+	// Create and manage multiple handlers concurrently
 	numHandlers := 10
 	handlers := make([]func(*models.Event), numHandlers)
 
@@ -360,7 +360,7 @@ func TestConcurrentSubscribeUnsubscribe(t *testing.T) {
 
 	// Subscribe/unsubscribe concurrent
 	for i := 0; i < numHandlers; i++ {
-		wg.Add(2) // En för subscribe, en för unsubscribe
+		wg.Add(2) // One for subscribe, one for unsubscribe
 		go func(id int) {
 			defer wg.Done()
 			err := publisher.Subscribe(models.EventProductCreated, handlers[id])
@@ -369,7 +369,7 @@ func TestConcurrentSubscribeUnsubscribe(t *testing.T) {
 
 		go func(id int) {
 			defer wg.Done()
-			time.Sleep(50 * time.Millisecond) // Lite delay innan unsubscribe
+			time.Sleep(50 * time.Millisecond) // A little delay before unsubscribe
 			err := publisher.Unsubscribe(models.EventProductCreated, handlers[id])
 			assert.NoError(t, err)
 		}(i)
@@ -377,7 +377,7 @@ func TestConcurrentSubscribeUnsubscribe(t *testing.T) {
 
 	wg.Wait()
 
-	// Publicera några events
+	// Publish a few events
 	for i := 0; i < 5; i++ {
 		event := createTestProductEvent()
 		err := publisher.Publish(event)
@@ -386,7 +386,7 @@ func TestConcurrentSubscribeUnsubscribe(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	// Verifiera att inga race conditions uppstod
+	// Verify that no race conditions occurred
 	mu.Lock()
 	totalEvents := 0
 	for _, count := range receivedEvents {

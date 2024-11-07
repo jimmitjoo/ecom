@@ -16,7 +16,7 @@ import (
 	"github.com/jimmitjoo/ecom/src/domain/models"
 )
 
-// MockProductService är en mock för ProductService interface
+// MockProductService is a mock for the ProductService interface
 type MockProductService struct {
 	mock.Mock
 }
@@ -83,8 +83,8 @@ func TestListProducts(t *testing.T) {
 	handler := NewProductHandler(mockService)
 
 	products := []*models.Product{
-		{ID: "1", BaseTitle: "Produkt 1"},
-		{ID: "2", BaseTitle: "Produkt 2"},
+		{ID: "1", BaseTitle: "Product 1"},
+		{ID: "2", BaseTitle: "Product 2"},
 	}
 	totalItems := 10
 
@@ -121,8 +121,8 @@ func TestListProductsWithCustomPagination(t *testing.T) {
 	handler := NewProductHandler(mockService)
 
 	products := []*models.Product{
-		{ID: "1", BaseTitle: "Produkt 1"},
-		{ID: "2", BaseTitle: "Produkt 2"},
+		{ID: "1", BaseTitle: "Product 1"},
+		{ID: "2", BaseTitle: "Product 2"},
 	}
 	totalItems := 20
 
@@ -228,11 +228,11 @@ func TestUpdateProduct(t *testing.T) {
 	// Mock UpdateProduct call
 	mockService.On("UpdateProduct", mock.AnythingOfType("*models.Product")).Return(nil)
 
-	// Skapa request body
+	// Create request body
 	body, _ := json.Marshal(updatedProduct)
 	req, _ := http.NewRequest("PUT", "/products/test_prod_1", bytes.NewBuffer(body))
 
-	// Sätt upp Gorilla Mux router för att hantera URL-parametrar
+	// Set up Gorilla Mux router to handle URL parameters
 	router := mux.NewRouter()
 	router.HandleFunc("/products/{id}", handler.UpdateProduct)
 

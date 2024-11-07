@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// TestBatchResultImplementation verifierar att BatchResult har alla nödvändiga fält
+// TestBatchResultImplementation verifies that BatchResult has all the necessary fields
 func TestBatchResultImplementation(t *testing.T) {
 	result := &interfaces.BatchResult{
 		ID:      "test_id",
@@ -16,13 +16,13 @@ func TestBatchResultImplementation(t *testing.T) {
 		Error:   "test error",
 	}
 
-	// Verifiera att alla fält är tillgängliga
+	// Verify that all fields are available
 	_ = result.ID
 	_ = result.Success
 	_ = result.Error
 }
 
-// MockProductService implementerar ProductService interface för test
+// MockProductService implements the ProductService interface for testing
 type MockProductService struct {
 	mock.Mock
 }
@@ -70,7 +70,7 @@ func (m *MockProductService) BatchDeleteProducts(ids []string) ([]*interfaces.Ba
 	return args.Get(0).([]*interfaces.BatchResult), args.Error(1)
 }
 
-// TestProductServiceInterface verifierar att MockProductService implementerar interfacet
+// TestProductServiceInterface verifies that MockProductService implements the interface
 func TestProductServiceInterface(t *testing.T) {
-	var _ interfaces.ProductService = &MockProductService{} // Kompileringstest
+	var _ interfaces.ProductService = &MockProductService{} // Compile-time test
 }

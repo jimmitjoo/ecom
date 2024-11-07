@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// MockEventPublisher implementerar EventPublisher interface för test
+// MockEventPublisher implements the EventPublisher interface for testing
 type MockEventPublisher struct {
 	publishCalled   bool
 	subscribeCalled bool
@@ -34,12 +34,12 @@ func (m *MockEventPublisher) Unsubscribe(eventType models.EventType, handler fun
 	return nil
 }
 
-// TestEventPublisherInterface verifierar att interfacet implementeras korrekt
+// TestEventPublisherInterface verifies that the interface is implemented correctly
 func TestEventPublisherInterface(t *testing.T) {
-	var _ events.EventPublisher = &MockEventPublisher{} // Kompileringstest
+	var _ events.EventPublisher = &MockEventPublisher{} // Compile-time test
 }
 
-// TestEventPublisherUsage verifierar att interfacet används korrekt
+// TestEventPublisherUsage verifies that the interface is used correctly
 func TestEventPublisherUsage(t *testing.T) {
 	publisher := &MockEventPublisher{}
 
@@ -67,7 +67,7 @@ func TestEventPublisherUsage(t *testing.T) {
 	assert.NotNil(t, publisher.lastHandler)
 }
 
-// TestEventTypes verifierar att alla event typer är definierade korrekt
+// TestEventTypes verifies that all event types are defined correctly
 func TestEventTypes(t *testing.T) {
 	eventTypes := []models.EventType{
 		models.EventProductCreated,
@@ -75,7 +75,7 @@ func TestEventTypes(t *testing.T) {
 		models.EventProductDeleted,
 	}
 
-	// Verifiera att event typer är unika
+	// Verify that event types are unique
 	seen := make(map[models.EventType]bool)
 	for _, et := range eventTypes {
 		assert.False(t, seen[et], "Event type %s is duplicated", et)
@@ -84,7 +84,7 @@ func TestEventTypes(t *testing.T) {
 	}
 }
 
-// TestEventData verifierar att event data hanteras korrekt
+// TestEventData verifies that event data is handled correctly
 func TestEventData(t *testing.T) {
 	event := &models.Event{
 		ID:   "test_event_1",
@@ -100,7 +100,7 @@ func TestEventData(t *testing.T) {
 		},
 	}
 
-	// Verifiera att event data kan type assertas korrekt
+	// Verify that event data can be type asserted correctly
 	productEvent, ok := event.Data.(*models.ProductEvent)
 	assert.True(t, ok, "Should be able to type assert event data")
 	assert.Equal(t, "test_product_1", productEvent.ProductID)
@@ -108,7 +108,7 @@ func TestEventData(t *testing.T) {
 	assert.NotNil(t, productEvent.Product)
 }
 
-// TestEventValidation verifierar att event data valideras korrekt
+// TestEventValidation verifies that event data is validated correctly
 func TestEventValidation(t *testing.T) {
 	testCases := []struct {
 		name      string

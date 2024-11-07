@@ -254,7 +254,7 @@ func TestBatchUpdateProducts(t *testing.T) {
 		assert.True(t, result.Success)
 		assert.Empty(t, result.Error)
 
-		// Verifiera uppdateringen
+		// Verify the update
 		updated, err := service.GetProduct(products[i].ID)
 		assert.NoError(t, err)
 		assert.Contains(t, updated.BaseTitle, "Uppdaterad")
@@ -300,7 +300,7 @@ func TestBatchDeleteProducts(t *testing.T) {
 func TestUpdateProductVersionConflict(t *testing.T) {
 	service, publisher, lockManager := setupProductService()
 
-	// Återställ standard mock-förväntningar
+	// Reset standard mock expectations
 	lockManager.ExpectedCalls = nil
 	lockManager.On("AcquireLock", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("time.Duration")).Return(true, nil)
 	lockManager.On("ReleaseLock", mock.AnythingOfType("string")).Return(nil)
@@ -309,16 +309,16 @@ func TestUpdateProductVersionConflict(t *testing.T) {
 	err := service.CreateProduct(product)
 	assert.NoError(t, err)
 
-	// Skapa en kopia av produkten med gammal version
+	// Create a copy of the product with the old version
 	conflictProduct := *product
 
-	// Uppdatera originalprodukten
-	product.BaseTitle = "Första uppdateringen"
+	// Update the original product
+	product.BaseTitle = "First update"
 	err = service.UpdateProduct(product)
 	assert.NoError(t, err)
 
-	// Försök uppdatera med den gamla kopian
-	conflictProduct.BaseTitle = "Andra uppdateringen"
+	// Try to update with the old copy
+	conflictProduct.BaseTitle = "Second update"
 	err = service.UpdateProduct(&conflictProduct)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "version conflict")
@@ -330,7 +330,7 @@ func TestUpdateProductVersionConflict(t *testing.T) {
 func TestUpdateProductLockFailure(t *testing.T) {
 	service, publisher, lockManager := setupProductService()
 
-	// Återställ mock och sätt ny förväntan för låsfel
+	// Reset mock and set new expectation for lock failure
 	lockManager.ExpectedCalls = nil
 	lockManager.On("AcquireLock", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("time.Duration")).Return(false, nil)
 
@@ -349,7 +349,7 @@ func TestUpdateProductLockFailure(t *testing.T) {
 func TestReplayEvents(t *testing.T) {
 	service, publisher, lockManager := setupProductService()
 
-	// Återställ standard mock-förväntningar
+	// Reset standard mock expectations
 	lockManager.ExpectedCalls = nil
 	lockManager.On("AcquireLock", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("time.Duration")).Return(true, nil)
 	lockManager.On("ReleaseLock", mock.AnythingOfType("string")).Return(nil)
@@ -358,11 +358,11 @@ func TestReplayEvents(t *testing.T) {
 	err := service.CreateProduct(product)
 	assert.NoError(t, err)
 
-	// Spara create event hash
+	// Save the create event hash
 	createHash := product.LastHash
 	t.Logf("Create event hash: %s", createHash)
 
-	// Uppdatera produkten några gånger
+	// Update the product a few times
 	var prevHash string
 	for i := 0; i < 3; i++ {
 		prevHash = product.LastHash
@@ -379,9 +379,9 @@ func TestReplayEvents(t *testing.T) {
 	events, err := service.ReplayEvents(product.ID, 1)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, events)
-	assert.Len(t, events, 4) // Ska ha create + 3 uppdateringshändelser
+	assert.Len(t, events, 4) // Should have create + 3 update events
 
-	// Verifiera händelserna
+	// Verify the events
 	for i, event := range events {
 		eventData, ok := event.Data.(*models.ProductEvent)
 		assert.True(t, ok)
@@ -391,11 +391,11 @@ func TestReplayEvents(t *testing.T) {
 		t.Logf("Event %d - Product Hash: %s", i, eventData.Product.LastHash)
 
 		if i == 0 {
-			// Första eventet ska vara create
+			// The first event should be create
 			assert.Equal(t, models.EventProductCreated, event.Type)
 			assert.Empty(t, eventData.PrevHash)
 		} else {
-			// Efterföljande events ska vara updates
+			// Subsequent events should be updates
 			assert.Equal(t, models.EventProductUpdated, event.Type)
 			prevEventData := events[i-1].Data.(*models.ProductEvent)
 			assert.Equal(t, prevEventData.Product.LastHash, eventData.PrevHash,

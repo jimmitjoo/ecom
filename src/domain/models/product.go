@@ -80,7 +80,7 @@ func (p *Product) CalculateHash() string {
 		Version:     p.Version,
 	}
 
-	// Exkludera tidsstämplar och LastHash från hashen
+	// Exclude timestamps and LastHash from the hash
 	data, _ := json.Marshal(hashStruct)
 	hash := sha256.Sum256(data)
 	return hex.EncodeToString(hash[:])
@@ -108,7 +108,7 @@ func (p *Product) Clone() *Product {
 		copy(clone.Variants, p.Variants)
 	}
 
-	// Kopiera tidsstämplar och hash
+	// Copy timestamps and hash
 	clone.CreatedAt = p.CreatedAt
 	clone.UpdatedAt = p.UpdatedAt
 	clone.LastHash = p.LastHash

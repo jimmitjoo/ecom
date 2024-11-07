@@ -26,7 +26,7 @@ const docTemplate = `{
     "paths": {
         "/products": {
             "get": {
-                "description": "Hämtar en lista över alla produkter, sorterade efter skapelsedatum i fallande ordning (nyaste först)",
+                "description": "Retrieves a list of all products, sorted by creation date in descending order (newest first)",
                 "consumes": [
                     "application/json"
                 ],
@@ -36,18 +36,18 @@ const docTemplate = `{
                 "tags": [
                     "products"
                 ],
-                "summary": "Lista alla produkter",
+                "summary": "List all products",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Sidnummer (börjar från 1)",
+                        "description": "Page number (starts from 1)",
                         "name": "page",
                         "in": "query",
                         "default": 1
                     },
                     {
                         "type": "integer",
-                        "description": "Antal produkter per sida",
+                        "description": "Number of products per page",
                         "name": "size",
                         "in": "query",
                         "default": 10
@@ -98,7 +98,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Skapar en ny produkt med angivna detaljer",
+                "description": "Creates a new product with the specified details",
                 "consumes": [
                     "application/json"
                 ],
@@ -108,10 +108,10 @@ const docTemplate = `{
                 "tags": [
                     "products"
                 ],
-                "summary": "Skapa en ny produkt",
+                "summary": "Create a new product",
                 "parameters": [
                     {
-                        "description": "Produktdetaljer",
+                        "description": "Product details",
                         "name": "product",
                         "in": "body",
                         "required": true,
@@ -302,7 +302,7 @@ const docTemplate = `{
         },
         "/products/{id}": {
             "get": {
-                "description": "Hämtar en produkt med angivet ID",
+                "description": "Retrieves a product with the specified ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -312,11 +312,11 @@ const docTemplate = `{
                 "tags": [
                     "products"
                 ],
-                "summary": "Hämta en produkt",
+                "summary": "Get a product",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Produkt ID",
+                        "description": "Product ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -338,7 +338,7 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "Uppdaterar en existerande produkt",
+                "description": "Updates an existing product",
                 "consumes": [
                     "application/json"
                 ],
@@ -348,17 +348,17 @@ const docTemplate = `{
                 "tags": [
                     "products"
                 ],
-                "summary": "Uppdatera en produkt",
+                "summary": "Update a product",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Produkt ID",
+                        "description": "Product ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Uppdaterade produktdetaljer",
+                        "description": "Updated product details",
                         "name": "product",
                         "in": "body",
                         "required": true,
@@ -389,7 +389,7 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Tar bort en produkt med angivet ID",
+                "description": "Deletes a product with the specified ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -399,11 +399,11 @@ const docTemplate = `{
                 "tags": [
                     "products"
                 ],
-                "summary": "Ta bort en produkt",
+                "summary": "Delete a product",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Produkt ID",
+                        "description": "Product ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -433,7 +433,7 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string",
-                    "example": "Ogiltig förfrågan"
+                    "example": "Invalid request"
                 }
             }
         },

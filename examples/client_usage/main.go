@@ -9,24 +9,24 @@ import (
 )
 
 func main() {
-	// Skapa ny klient
+	// Create a new client
 	c := client.NewClient("localhost:8080")
 
-	// Skapa parametrar för GetProducts
+	// Create parameters for GetProducts
 	params := products.NewGetProductsParams()
 
-	// Hämta alla produkter
+	// Get all products
 	result, err := c.Products.GetProducts(params)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Skriv ut produkterna
+	// Print the products
 	for _, p := range result.Payload {
-		title := "Ingen titel"
+		title := "No title"
 		if p.BaseTitle != nil {
 			title = *p.BaseTitle
 		}
-		fmt.Printf("Produkt: %s\n", title)
+		fmt.Printf("Product: %s\n", title)
 	}
 }

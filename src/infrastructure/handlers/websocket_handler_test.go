@@ -83,7 +83,7 @@ func TestWebSocketConnection(t *testing.T) {
 	assert.NoError(t, err)
 	defer ws.Close()
 
-	// Verifiera bara att anslutningen lyckades
+	// Verify that the connection was successful
 	assert.NotNil(t, ws)
 
 	mockPublisher.AssertExpectations(t)

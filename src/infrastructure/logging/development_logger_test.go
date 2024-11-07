@@ -10,7 +10,7 @@ import (
 )
 
 func TestDevelopmentLogger(t *testing.T) {
-	// Skapa en observerbar development logger
+	// Create an observable development logger
 	core, recorded := observer.New(zapcore.DebugLevel)
 	logger := &Logger{
 		Logger: zap.New(core,
@@ -19,7 +19,7 @@ func TestDevelopmentLogger(t *testing.T) {
 			zap.AddStacktrace(zapcore.ErrorLevel)),
 	}
 
-	// Testa olika loggnivåer
+	// Test different log levels
 	testCases := []struct {
 		level   string
 		logFunc func(string, ...zap.Field)
@@ -32,10 +32,10 @@ func TestDevelopmentLogger(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.level, func(t *testing.T) {
-			recorded.TakeAll() // Rensa tidigare logs
+			recorded.TakeAll() // Clear previous logs
 			message := tc.level + " test message"
 
-			// Logga med extra utvecklingsinformation
+			// Log with extra development information
 			tc.logFunc(message,
 				zap.String("request_id", "test-123"),
 				zap.String("function", "TestFunction"),

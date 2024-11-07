@@ -45,21 +45,21 @@ func (h *ProductHandler) writeError(w http.ResponseWriter, code int, message str
 // @Failure 500 {object} handlers.ErrorResponse
 // @Router /products [get]
 func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
-	// Skapa en unik request ID
+	// Create a unique request ID
 	requestID := uuid.New().String()
 
-	// Skapa logger med request context
+	// Create a logger with request context
 	logger, _ := logging.NewLogger()
 	logger = logger.WithRequestID(requestID)
 
-	// Logga start av request processing
+	// Log the start of request processing
 	logger.Debug("Processing request",
 		zap.String("method", r.Method),
 		zap.String("path", r.URL.Path),
 		zap.String("remote_addr", r.RemoteAddr),
 	)
 
-	// Hämta pagineringsparametrar från query
+	// Get pagination parameters from query
 	page := 1
 	pageSize := 10
 	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
@@ -113,12 +113,12 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateProduct godoc
-// @Summary Skapa en ny produkt
-// @Description Skapar en ny produkt med angivna detaljer
+// @Summary Create a new product
+// @Description Creates a new product with the given details
 // @Tags products
 // @Accept json
 // @Produce json
-// @Param product body models.Product true "Produktdetaljer"
+// @Param product body models.Product true "Product details"
 // @Success 201 {object} models.Product
 // @Failure 400 {object} handlers.ErrorResponse
 // @Router /products [post]
@@ -166,12 +166,12 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetProduct godoc
-// @Summary Hämta en produkt
-// @Description Hämtar en produkt med angivet ID
+// @Summary Get a product
+// @Description Fetches a product with the given ID
 // @Tags products
 // @Accept json
 // @Produce json
-// @Param id path string true "Produkt ID"
+// @Param id path string true "Product ID"
 // @Success 200 {object} models.Product
 // @Failure 404 {object} handlers.ErrorResponse
 // @Router /products/{id} [get]
@@ -212,13 +212,13 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateProduct godoc
-// @Summary Uppdatera en produkt
-// @Description Uppdaterar en existerande produkt
+// @Summary Update a product
+// @Description Updates an existing product
 // @Tags products
 // @Accept json
 // @Produce json
-// @Param id path string true "Produkt ID"
-// @Param product body models.Product true "Uppdaterade produktdetaljer"
+// @Param id path string true "Product ID"
+// @Param product body models.Product true "Updated product details"
 // @Success 200 {object} models.Product
 // @Failure 400,404 {object} handlers.ErrorResponse
 // @Router /products/{id} [put]
@@ -260,13 +260,13 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Använd ID från URL:en, inte från request body
+	// Use ID from URL, not from request body
 	updatedProduct.ID = id
-	// Behåll version från existerande produkt
+	// Keep version from existing product
 	updatedProduct.Version = existingProduct.Version
-	// Behåll created_at från existerande produkt
+	// Keep created_at from existing product
 	updatedProduct.CreatedAt = existingProduct.CreatedAt
-	// Uppdatera updated_at till nu
+	// Update updated_at to now
 	updatedProduct.UpdatedAt = time.Now()
 
 	if err := h.service.UpdateProduct(&updatedProduct); err != nil {
@@ -289,12 +289,12 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteProduct godoc
-// @Summary Ta bort en produkt
-// @Description Tar bort en produkt med angivet ID
+// @Summary Delete a product
+// @Description Deletes a product with the given ID
 // @Tags products
 // @Accept json
 // @Produce json
-// @Param id path string true "Produkt ID"
+// @Param id path string true "Product ID"
 // @Success 204 "No Content"
 // @Failure 404 {object} handlers.ErrorResponse
 // @Router /products/{id} [delete]

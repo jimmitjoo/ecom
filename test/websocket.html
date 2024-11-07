@@ -179,10 +179,10 @@
     <div class="control-panel">
         <h3>Testdata Generator</h3>
         <div class="generator-controls">
-            <button onclick="generateProducts(1)">Generera 1 produkt</button>
-            <button onclick="generateProducts(5)">Generera 5 produkter</button>
-            <button onclick="generateProducts(20)">Generera 20 produkter</button>
-            <button onclick="generateRandomBatch()">Generera slumpmässigt antal</button>
+            <button onclick="generateProducts(1)">Generate 1 product</button>
+            <button onclick="generateProducts(5)">Generate 5 products</button>
+            <button onclick="generateProducts(20)">Generate 20 products</button>
+            <button onclick="generateRandomBatch()">Generate random number</button>
         </div>
     </div>
 
@@ -461,16 +461,16 @@
 
             return {
                 "sku": "TEST-" + Math.random().toString(36).substring(7).toUpperCase(),
-                "base_title": "Testprodukt " + Math.floor(Math.random() * 1000),
-                "description": "Automatiskt genererad testprodukt",
+                "base_title": "Test Product " + Math.floor(Math.random() * 1000),
+                "description": "Automatically generated test product",
                 "prices": currencies.map(currency => ({
                     "currency": currency,
                     "amount": Math.floor(Math.random() * 9900) + 100
                 })),
                 "metadata": markets.map(market => ({
                     "market": market,
-                    "title": `Testprodukt för ${market}`,
-                    "description": `Testbeskrivning för marknad ${market}`
+                    "title": `Test Product for ${market}`,
+                    "description": `Test description for market ${market}`
                 }))
             };
         }
@@ -487,14 +487,14 @@
             })
                 .then(response => response.json())
                 .then(data => {
-                    console.log(`Genererade ${count} produkter:`, data);
-                    refreshProducts(); // Uppdatera produktlistan
+                    console.log(`Generated ${count} products:`, data);
+                    refreshProducts(); // Update product list
                 })
-                .catch(error => console.error('Fel vid generering:', error));
+                .catch(error => console.error('Error generating:', error));
         }
 
         function generateRandomBatch() {
-            const count = Math.floor(Math.random() * 46) + 5; // 5-50 produkter
+            const count = Math.floor(Math.random() * 46) + 5; // 5-50 products
             generateProducts(count);
         }
     </script>

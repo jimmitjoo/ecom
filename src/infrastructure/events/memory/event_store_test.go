@@ -45,31 +45,31 @@ func TestStoreAndGetEvents(t *testing.T) {
 	store := NewMemoryEventStore()
 	entityID := "test_product_1"
 
-	// Skapa och spara några events
+	// Create and store some events
 	events := []*models.Event{
 		createTestEvent(entityID, 1, models.EventProductCreated, ""),
 		createTestEvent(entityID, 2, models.EventProductUpdated, "hash1"),
 		createTestEvent(entityID, 3, models.EventProductUpdated, "hash2"),
 	}
 
-	// Spara events
+	// Store events
 	for _, event := range events {
 		err := store.StoreEvent(event)
 		assert.NoError(t, err)
 	}
 
-	// Hämta alla events
+	// Get all events
 	retrieved, err := store.GetEvents(entityID, 1)
 	assert.NoError(t, err)
 	assert.Len(t, retrieved, 3)
 
-	// Verifiera att events är korrekt sparade och hämtade
+	// Verify that events are correctly stored and retrieved
 	for i, event := range retrieved {
 		assert.Equal(t, events[i].ID, event.ID)
 		assert.Equal(t, events[i].Version, event.Version)
 		assert.Equal(t, events[i].EntityID, event.EntityID)
 
-		// Verifiera event data
+		// Verify event data
 		originalEventData := events[i].Data.(*models.ProductEvent)
 		retrievedEventData := event.Data.(*models.ProductEvent)
 
@@ -84,7 +84,7 @@ func TestGetEventsFromVersion(t *testing.T) {
 	store := NewMemoryEventStore()
 	entityID := "test_product_1"
 
-	// Skapa och spara events
+	// Create and store events
 	events := []*models.Event{
 		createTestEvent(entityID, 1, models.EventProductCreated, ""),
 		createTestEvent(entityID, 2, models.EventProductUpdated, "hash1"),
@@ -97,22 +97,22 @@ func TestGetEventsFromVersion(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	// Testa att hämta events från olika versioner
+	// Test getting events from different versions
 	testCases := []struct {
 		fromVersion int64
 		expected    int
 	}{
-		{1, 4}, // Alla events
-		{2, 3}, // Från version 2 och uppåt
-		{3, 2}, // Från version 3 och uppåt
-		{4, 1}, // Bara sista eventet
-		{5, 0}, // Inga events
+		{1, 4}, // All events
+		{2, 3}, // From version 2 and up
+		{3, 2}, // From version 3 and up
+		{4, 1}, // Only the last event
+		{5, 0}, // No events
 	}
 
 	for _, tc := range testCases {
 		retrieved, err := store.GetEvents(entityID, tc.fromVersion)
 		assert.NoError(t, err)
-		assert.Len(t, retrieved, tc.expected, "För fromVersion %d", tc.fromVersion)
+		assert.Len(t, retrieved, tc.expected, "For fromVersion %d", tc.fromVersion)
 	}
 }
 
@@ -120,22 +120,22 @@ func TestEventDeepCopy(t *testing.T) {
 	store := NewMemoryEventStore()
 	entityID := "test_product_1"
 
-	// Skapa och spara ett event
+	// Create and store an event
 	original := createTestEvent(entityID, 1, models.EventProductCreated, "")
 	err := store.StoreEvent(original)
 	assert.NoError(t, err)
 
-	// Hämta eventet
+	// Get the event
 	retrieved, err := store.GetEvents(entityID, 1)
 	assert.NoError(t, err)
 	assert.Len(t, retrieved, 1)
 
-	// Modifiera det hämtade eventet
+	// Modify the retrieved event
 	retrievedEvent := retrieved[0]
 	retrievedEventData := retrievedEvent.Data.(*models.ProductEvent)
 	retrievedEventData.Product.BaseTitle = "Modified Title"
 
-	// Hämta eventet igen och verifiera att originalet inte ändrades
+	// Get the event again and verify that the original hasn't changed
 	retrievedAgain, err := store.GetEvents(entityID, 1)
 	assert.NoError(t, err)
 	assert.Len(t, retrievedAgain, 1)
@@ -149,7 +149,7 @@ func TestConcurrentAccess(t *testing.T) {
 	store := NewMemoryEventStore()
 	entityID := "test_product_1"
 
-	// Skapa flera goroutines som sparar och hämtar events samtidigt
+	// Create multiple goroutines that save and retrieve events concurrently
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
 		go func(version int64) {
@@ -160,12 +160,12 @@ func TestConcurrentAccess(t *testing.T) {
 		}(int64(i + 1))
 	}
 
-	// Vänta på att alla goroutines är klara
+	// Wait for all goroutines to finish
 	for i := 0; i < 10; i++ {
 		<-done
 	}
 
-	// Verifiera att alla events sparades korrekt
+	// Verify that all events were stored correctly
 	events, err := store.GetEvents(entityID, 1)
 	assert.NoError(t, err)
 	assert.Len(t, events, 10)

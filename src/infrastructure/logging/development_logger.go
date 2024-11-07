@@ -8,18 +8,18 @@ import (
 func NewDevelopmentLogger() (*Logger, error) {
 	config := zap.NewDevelopmentConfig()
 
-	// Sätt development-specifika inställningar
+	// Set development-specific settings
 	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	config.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
 	config.EncoderConfig.EncodeDuration = zapcore.StringDurationEncoder
 
-	// Aktivera alla fält för utvecklingsläge
+	// Enable all fields for development mode
 	config.Development = true
 	config.DisableCaller = false
 	config.DisableStacktrace = false
 
-	// Sätt lägsta lognivå till Debug i utvecklingsläge
+	// Set minimum log level to Debug in development mode
 	config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 
 	zapLogger, err := config.Build(

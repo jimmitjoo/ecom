@@ -70,30 +70,30 @@ func (r *ProductRepository) List(page, pageSize int) ([]*models.Product, int, er
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	// Konvertera map till slice för paginering
+	// Convert map to slice for pagination
 	allProducts := make([]*models.Product, 0, len(r.products))
 	for _, product := range r.products {
 		allProducts = append(allProducts, product)
 	}
 
-	// Sortera produkter efter CreatedAt i fallande ordning (nyaste först)
+	// Sort products by CreatedAt in descending order (newest first)
 	sort.Slice(allProducts, func(i, j int) bool {
 		return allProducts[i].CreatedAt.After(allProducts[j].CreatedAt)
 	})
 
-	// Beräkna total antal produkter
+	// Calculate total number of products
 	total := len(allProducts)
 
-	// Beräkna start och slut index för paginering
+	// Calculate start and end index for pagination
 	start := (page - 1) * pageSize
 	end := start + pageSize
 
-	// Validera start index
+	// Validate start index
 	if start >= total {
 		return []*models.Product{}, total, nil
 	}
 
-	// Justera end index om det går utanför bounds
+	// Adjust end index if it's out of bounds
 	if end > total {
 		end = total
 	}

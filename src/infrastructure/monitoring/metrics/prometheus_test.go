@@ -11,7 +11,7 @@ import (
 )
 
 func TestProductOperationsMetrics(t *testing.T) {
-	// Reset metrics genom att skapa nya
+	// Reset metrics by creating new ones
 	ProductOperations = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "test_product_operations_total",
@@ -44,7 +44,7 @@ func TestProductOperationsMetrics(t *testing.T) {
 }
 
 func TestBatchOperationSizeMetrics(t *testing.T) {
-	// Skapa ny histogram för testet
+	// Create a new histogram for the test
 	BatchOperationSize = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "test_batch_operation_size",
@@ -62,17 +62,17 @@ func TestBatchOperationSizeMetrics(t *testing.T) {
 		expectedSum += size
 	}
 
-	// Hämta metric-värden
+	// Get metric values
 	metric := &dto.Metric{}
 	BatchOperationSize.(prometheus.Histogram).Write(metric)
 
-	// Verifiera count och sum
+	// Verify count and sum
 	assert.Equal(t, expectedCount, metric.Histogram.GetSampleCount())
 	assert.Equal(t, expectedSum, metric.Histogram.GetSampleSum())
 }
 
 func TestWebSocketConnectionMetrics(t *testing.T) {
-	// Skapa ny gauge för testet
+	// Create a new gauge for the test
 	ActiveWebSocketConnections = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "test_active_websocket_connections",
@@ -102,7 +102,7 @@ func TestWebSocketConnectionMetrics(t *testing.T) {
 }
 
 func TestEventProcessingDurationMetrics(t *testing.T) {
-	// Skapa ny histogram för testet
+	// Create a new histogram for the test
 	EventProcessingDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "test_event_processing_duration_seconds",
@@ -125,13 +125,13 @@ func TestEventProcessingDurationMetrics(t *testing.T) {
 		t.Run(tc.eventType, func(t *testing.T) {
 			EventProcessingDuration.WithLabelValues(tc.eventType).Observe(tc.duration)
 
-			// Hämta metric-värden
+			// Get metric values
 			metric := &dto.Metric{}
 			observer, err := EventProcessingDuration.GetMetricWithLabelValues(tc.eventType)
 			assert.NoError(t, err)
 			observer.(prometheus.Histogram).Write(metric)
 
-			// Verifiera att värdet registrerades
+			// Verify that the value was registered
 			assert.Equal(t, uint64(1), metric.Histogram.GetSampleCount())
 			assert.Equal(t, tc.duration, metric.Histogram.GetSampleSum())
 		})
@@ -152,7 +152,7 @@ func TestMetricsRegistration(t *testing.T) {
 	for _, metric := range metrics {
 		err := registry.Register(metric)
 		if err != nil {
-			// Ignorera "already exists" fel eftersom metrics skapas av promauto
+			// Ignore "already exists" error since metrics are created by promauto
 			if _, ok := err.(prometheus.AlreadyRegisteredError); !ok {
 				t.Errorf("Failed to register metric: %v", err)
 			}

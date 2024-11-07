@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// ChaosConfig innehåller konfiguration för chaos tester
+// ChaosConfig contains configuration for chaos tests
 type ChaosConfig struct {
 	NetworkLatency  time.Duration
 	PacketLossRate  float64
@@ -21,7 +21,7 @@ type ChaosConfig struct {
 	CorruptDataRate float64
 }
 
-// MemoryPressure simulerar minnestryck
+// simulateMemoryPressure simulates memory pressure
 func simulateMemoryPressure(t *testing.T) {
 	var memoryHog [][]byte
 	defer func() {
@@ -29,18 +29,18 @@ func simulateMemoryPressure(t *testing.T) {
 		runtime.GC()
 	}()
 
-	// Allokera minne tills vi når 80% användning
+	// Allocate memory until we reach 80% usage
 	var memStats runtime.MemStats
 	for {
 		runtime.ReadMemStats(&memStats)
 		if float64(memStats.Alloc)/float64(memStats.Sys) > 0.8 {
 			break
 		}
-		memoryHog = append(memoryHog, make([]byte, 1024*1024)) // 1MB i taget
+		memoryHog = append(memoryHog, make([]byte, 1024*1024)) // 1MB at a time
 	}
 }
 
-// DataCorruption simulerar korrupt data
+// DataCorruption simulates corrupt data
 type DataCorruption struct {
 	rate float64
 }
@@ -62,16 +62,16 @@ func (dc *DataCorruption) CorruptData(data []byte) []byte {
 }
 
 func TestMemoryPressure(t *testing.T) {
-	// Sätt upp produktservice med många samtidiga anrop
+	// Set up product service with many concurrent calls
 	service, _ := setupTestService()
 
 	t.Run("Service Under Memory Pressure", func(t *testing.T) {
 		var wg sync.WaitGroup
 
-		// Starta minnestryck i bakgrunden
+		// Start memory pressure in the background
 		go simulateMemoryPressure(t)
 
-		// Gör många samtidiga anrop
+		// Make many concurrent calls
 		for i := 0; i < 100; i++ {
 			wg.Add(1)
 			go func() {
@@ -87,14 +87,14 @@ func TestMemoryPressure(t *testing.T) {
 }
 
 func TestDataCorruption(t *testing.T) {
-	// Öka korruptionsfrekvensen för att säkerställa att data verkligen korrupteras
+	// Increase corruption rate to ensure data is actually corrupted
 	corruption := &DataCorruption{rate: 0.5}
 
 	t.Run("Handle Corrupt Data", func(t *testing.T) {
 		product := generateValidProduct()
 		data, _ := json.Marshal(product)
 
-		// Korruptera data flera gånger om det behövs
+		// Corrupt data multiple times if needed
 		var corrupted models.Product
 		var err error
 		maxAttempts := 5
@@ -103,13 +103,13 @@ func TestDataCorruption(t *testing.T) {
 			corruptData := corruption.CorruptData(data)
 			err = json.Unmarshal(corruptData, &corrupted)
 
-			// Om vi fick ett unmarshal-fel eller data är korrupt, break
+			// If we got an unmarshal error or data is corrupted, break
 			if err != nil || corrupted.ID != product.ID {
 				break
 			}
 		}
 
-		// Verifiera att vi antingen fick ett fel eller korrupt data
+		// Verify that we either got an error or corrupted data
 		if err != nil {
 			assert.True(t,
 				strings.Contains(err.Error(), "invalid character") ||
@@ -125,7 +125,7 @@ func TestDataCorruption(t *testing.T) {
 	})
 
 	t.Run("Guaranteed Corruption", func(t *testing.T) {
-		// Testa med 100% korruptionsfrekvens
+		// Test with 100% corruption rate
 		guaranteedCorruption := &DataCorruption{rate: 1.0}
 
 		product := generateValidProduct()
@@ -135,7 +135,7 @@ func TestDataCorruption(t *testing.T) {
 		var corrupted models.Product
 		err := json.Unmarshal(corruptData, &corrupted)
 
-		// Med 100% korruption bör vi alltid få ett fel
+		// With 100% corruption, we should always get an error
 		assert.Error(t, err, "Expected error with 100% corruption rate")
 	})
 }

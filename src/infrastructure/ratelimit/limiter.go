@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-// RateLimiter interface definierar metoder för rate limiting
+// RateLimiter interface defines methods for rate limiting
 type RateLimiter interface {
 	Allow(key string) bool
 	Reset(key string)
 }
 
-// TokenBucketLimiter implementerar token bucket algoritmen
+// TokenBucketLimiter implements the token bucket algorithm
 type TokenBucketLimiter struct {
 	mu           sync.RWMutex
 	tokens       map[string]float64
@@ -37,14 +37,14 @@ func (l *TokenBucketLimiter) Allow(key string) bool {
 
 	now := time.Now()
 
-	// Initiera om nyckel inte finns
+	// Initialize key if it doesn't exist
 	if _, exists := l.tokens[key]; !exists {
 		l.tokens[key] = l.capacity
 		l.lastRefill[key] = now
 		return true
 	}
 
-	// Beräkna tokens att fylla på
+	// Calculate tokens to refill
 	elapsed := now.Sub(l.lastRefill[key])
 	tokensToAdd := float64(elapsed) / float64(l.refillPeriod) * l.rate
 
@@ -53,7 +53,7 @@ func (l *TokenBucketLimiter) Allow(key string) bool {
 		currentTokens = l.capacity
 	}
 
-	// Kontrollera om vi har tillräckligt med tokens
+	// Check if we have enough tokens
 	if currentTokens < 1 {
 		return false
 	}
@@ -70,7 +70,7 @@ func (l *TokenBucketLimiter) Reset(key string) {
 	delete(l.lastRefill, key)
 }
 
-// SlidingWindowLimiter implementerar sliding window algoritmen
+// SlidingWindowLimiter implements the sliding window algorithm
 type SlidingWindowLimiter struct {
 	mu       sync.RWMutex
 	windows  map[string][]time.Time
@@ -93,13 +93,13 @@ func (l *SlidingWindowLimiter) Allow(key string) bool {
 	now := time.Now()
 	cutoff := now.Add(-l.duration)
 
-	// Hämta eller initiera fönstret
+	// Get or initialize the window
 	window, exists := l.windows[key]
 	if !exists {
 		window = make([]time.Time, 0, l.limit)
 	}
 
-	// Filtrera bort gamla timestamps
+	// Filter out old timestamps
 	validWindow := make([]time.Time, 0, len(window))
 	for _, t := range window {
 		if t.After(cutoff) {
@@ -107,13 +107,13 @@ func (l *SlidingWindowLimiter) Allow(key string) bool {
 		}
 	}
 
-	// Kontrollera om vi är över gränsen
+	// Check if we are over the limit
 	if len(validWindow) >= l.limit {
-		l.windows[key] = validWindow // Spara det uppdaterade fönstret
+		l.windows[key] = validWindow // Save the updated window
 		return false
 	}
 
-	// Lägg till ny timestamp och spara
+	// Add new timestamp and save
 	validWindow = append(validWindow, now)
 	l.windows[key] = validWindow
 

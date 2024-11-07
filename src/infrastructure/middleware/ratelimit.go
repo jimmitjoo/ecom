@@ -9,7 +9,7 @@ import (
 func RateLimitMiddleware(limiter ratelimit.RateLimiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Använd IP som nyckel för rate limiting
+			// Use IP as the key for rate limiting
 			key := r.RemoteAddr
 
 			if !limiter.Allow(key) {

@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewLogger(t *testing.T) {
-	// Skapa en ny logger
+	// Create a new logger
 	logger, err := NewLogger()
 	assert.NoError(t, err)
 	assert.NotNil(t, logger)
@@ -18,27 +18,27 @@ func TestNewLogger(t *testing.T) {
 }
 
 func TestLoggerWithContext(t *testing.T) {
-	// Skapa en observerbar logger för att kunna inspektera loggade meddelanden
+	// Create an observable logger to inspect logged messages
 	core, recorded := observer.New(zap.InfoLevel)
 	testLogger := &Logger{
 		Logger: zap.New(core),
 	}
 
-	// Skapa context med logger
+	// Create context with logger
 	ctx := WithContext(context.Background(), testLogger)
 	assert.NotNil(t, ctx)
 
-	// Hämta logger från context
+	// Get logger from context
 	loggerFromCtx := FromContext(ctx)
 	assert.NotNil(t, loggerFromCtx)
 	assert.Equal(t, testLogger, loggerFromCtx)
 
-	// Testa att logga något
+	// Test logging something
 	loggerFromCtx.Info("test message",
 		zap.String("key", "value"),
 	)
 
-	// Verifiera att meddelandet loggades
+	// Verify that the message was logged
 	logs := recorded.All()
 	assert.Len(t, logs, 1)
 	assert.Equal(t, "test message", logs[0].Message)
@@ -46,24 +46,24 @@ func TestLoggerWithContext(t *testing.T) {
 }
 
 func TestFromContextWithNoLogger(t *testing.T) {
-	// Testa att FromContext returnerar en nop-logger när ingen logger finns i context
+	// Test that FromContext returns a nop-logger when no logger is in context
 	ctx := context.Background()
 	logger := FromContext(ctx)
 	assert.NotNil(t, logger)
 
-	// Verifiera att det är en nop-logger genom att logga något
-	// Detta ska inte orsaka några fel
+	// Verify that it is a nop-logger by logging something
+	// This should not cause any errors
 	logger.Info("this should not cause any errors")
 }
 
 func TestLogLevels(t *testing.T) {
-	// Skapa en observerbar logger
+	// Create an observable logger
 	core, recorded := observer.New(zap.DebugLevel)
 	testLogger := &Logger{
 		Logger: zap.New(core),
 	}
 
-	// Testa olika log levels
+	// Test different log levels
 	testCases := []struct {
 		level   string
 		logFunc func(string, ...zap.Field)
@@ -76,7 +76,7 @@ func TestLogLevels(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.level, func(t *testing.T) {
-			recorded.TakeAll() // Rensa tidigare logs
+			recorded.TakeAll() // Clear previous logs
 			message := tc.level + " message"
 
 			tc.logFunc(message, zap.String("level", tc.level))
@@ -90,13 +90,13 @@ func TestLogLevels(t *testing.T) {
 }
 
 func TestLoggerFields(t *testing.T) {
-	// Skapa en observerbar logger
+	// Create an observable logger
 	core, recorded := observer.New(zap.InfoLevel)
 	testLogger := &Logger{
 		Logger: zap.New(core),
 	}
 
-	// Testa olika typer av fields
+	// Test different types of fields
 	testLogger.Info("test message",
 		zap.String("string", "value"),
 		zap.Int("int", 123),
@@ -115,13 +115,13 @@ func TestLoggerFields(t *testing.T) {
 }
 
 func TestLoggerConcurrency(t *testing.T) {
-	// Skapa en observerbar logger
+	// Create an observable logger
 	core, recorded := observer.New(zap.InfoLevel)
 	testLogger := &Logger{
 		Logger: zap.New(core),
 	}
 
-	// Logga från flera goroutines samtidigt
+	// Log from multiple goroutines simultaneously
 	const numGoroutines = 100
 	done := make(chan bool)
 
@@ -134,16 +134,16 @@ func TestLoggerConcurrency(t *testing.T) {
 		}(i)
 	}
 
-	// Vänta på att alla goroutines är klara
+	// Wait until all goroutines are done
 	for i := 0; i < numGoroutines; i++ {
 		<-done
 	}
 
-	// Verifiera att alla meddelanden loggades
+	// Verify that all messages were logged
 	logs := recorded.All()
 	assert.Len(t, logs, numGoroutines)
 
-	// Verifiera att alla goroutine IDs finns med
+	// Verify that all goroutine IDs are present
 	ids := make(map[int]bool)
 	for _, log := range logs {
 		id := int(log.ContextMap()["goroutine_id"].(int64))

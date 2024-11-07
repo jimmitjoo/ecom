@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// NetworkChaos simulerar nätverksproblem
+// NetworkChaos simulates network problems
 type NetworkChaos struct {
 	latency  time.Duration
 	lossRate float64

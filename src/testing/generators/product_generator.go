@@ -8,14 +8,14 @@ import (
 	"github.com/jimmitjoo/ecom/src/domain/models"
 )
 
-// ProductGenerator innehåller konfiguration för att generera testprodukter
+// ProductGenerator contains configuration for generating test products
 type ProductGenerator struct {
 	SkuPrefix  string
 	Markets    []string
 	Currencies []string
 }
 
-// NewProductGenerator skapar en ny generator med standardvärden
+// NewProductGenerator creates a new generator with default values
 func NewProductGenerator() *ProductGenerator {
 	return &ProductGenerator{
 		SkuPrefix:  "TEST",
@@ -24,7 +24,7 @@ func NewProductGenerator() *ProductGenerator {
 	}
 }
 
-// GenerateProduct skapar en enskild testprodukt
+// GenerateProduct creates a single test product
 func (g *ProductGenerator) GenerateProduct() *models.Product {
 	rand.Seed(time.Now().UnixNano())
 
@@ -38,16 +38,16 @@ func (g *ProductGenerator) GenerateProduct() *models.Product {
 		UpdatedAt: time.Now(),
 	}
 
-	// Lägg till priser
+	// Add prices
 	product.Prices = g.generatePrices()
 
-	// Lägg till metadata för varje marknad
+	// Add metadata for each market
 	product.Metadata = g.generateMetadata(product.BaseTitle)
 
 	return product
 }
 
-// GenerateProducts skapar flera testprodukter
+// GenerateProducts creates multiple test products
 func (g *ProductGenerator) GenerateProducts(count int) []*models.Product {
 	products := make([]*models.Product, count)
 	for i := 0; i < count; i++ {
@@ -56,7 +56,7 @@ func (g *ProductGenerator) GenerateProducts(count int) []*models.Product {
 	return products
 }
 
-// generatePrices skapar testpriser för olika valutor
+// generatePrices creates test prices for different currencies
 func (g *ProductGenerator) generatePrices() []models.Price {
 	prices := make([]models.Price, len(g.Currencies))
 	for i, currency := range g.Currencies {
@@ -68,7 +68,7 @@ func (g *ProductGenerator) generatePrices() []models.Price {
 	return prices
 }
 
-// generateMetadata skapar testmetadata för olika marknader
+// generateMetadata creates test metadata for different markets
 func (g *ProductGenerator) generateMetadata(baseTitle string) []models.MarketMetadata {
 	metadata := make([]models.MarketMetadata, len(g.Markets))
 	for i, market := range g.Markets {

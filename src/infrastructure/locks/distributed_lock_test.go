@@ -15,20 +15,20 @@ func TestLockAcquisition(t *testing.T) {
 	ctx := context.Background()
 	resourceID := "test_resource"
 
-	// Testa att låsa en resurs
+	// Test acquiring a lock on a resource
 	acquired, err := manager.AcquireLock(ctx, resourceID, time.Second)
 	assert.NoError(t, err)
 	assert.True(t, acquired, "Should acquire lock on first attempt")
 
-	// Testa att försöka låsa samma resurs igen
+	// Test trying to lock the same resource again
 	acquired, err = manager.AcquireLock(ctx, resourceID, time.Second)
 	assert.NoError(t, err)
 	assert.False(t, acquired, "Should not acquire lock when resource is already locked")
 
-	// Vänta tills låset går ut
+	// Wait until the lock expires
 	time.Sleep(time.Second * 2)
 
-	// Testa att låsa resursen igen efter att den gått ut
+	// Test acquiring the resource again after it expired
 	acquired, err = manager.AcquireLock(ctx, resourceID, time.Second)
 	assert.NoError(t, err)
 	assert.True(t, acquired, "Should acquire lock after previous lock expired")
@@ -39,16 +39,16 @@ func TestLockRelease(t *testing.T) {
 	ctx := context.Background()
 	resourceID := "test_resource"
 
-	// Låsa resursen
+	// Acquire the lock on the resource
 	acquired, err := manager.AcquireLock(ctx, resourceID, time.Second)
 	assert.NoError(t, err)
 	assert.True(t, acquired)
 
-	// Släpp låset
+	// Release the lock
 	err = manager.ReleaseLock(resourceID)
 	assert.NoError(t, err)
 
-	// Verifiera att resursen kan låsas igen direkt
+	// Verify that the resource can be locked again immediately
 	acquired, err = manager.AcquireLock(ctx, resourceID, time.Second)
 	assert.NoError(t, err)
 	assert.True(t, acquired, "Should acquire lock immediately after release")
@@ -72,7 +72,7 @@ func TestConcurrentLockAccess(t *testing.T) {
 				mu.Lock()
 				successCount++
 				mu.Unlock()
-				time.Sleep(time.Millisecond * 100) // Simulera arbete
+				time.Sleep(time.Millisecond * 100) // Simulate work
 				err := manager.ReleaseLock(resourceID)
 				assert.NoError(t, err)
 			}
@@ -90,15 +90,15 @@ func TestLockExpiration(t *testing.T) {
 	resourceID := "test_resource"
 	shortDuration := time.Millisecond * 100
 
-	// Låsa med kort TTL
+	// Acquire lock with short TTL
 	acquired, err := manager.AcquireLock(ctx, resourceID, shortDuration)
 	assert.NoError(t, err)
 	assert.True(t, acquired)
 
-	// Vänta på att låset ska gå ut
+	// Wait until the lock expires
 	time.Sleep(shortDuration * 2)
 
-	// Verifiera att en annan process kan låsa resursen
+	// Verify that another process can acquire the lock
 	acquired, err = manager.AcquireLock(ctx, resourceID, time.Second)
 	assert.NoError(t, err)
 	assert.True(t, acquired, "Should acquire lock after expiration")
@@ -110,17 +110,17 @@ func TestMultipleResources(t *testing.T) {
 	resource1 := "resource1"
 	resource2 := "resource2"
 
-	// Låsa första resursen
+	// Acquire lock on the first resource
 	acquired1, err := manager.AcquireLock(ctx, resource1, time.Second)
 	assert.NoError(t, err)
 	assert.True(t, acquired1)
 
-	// Låsa andra resursen
+	// Acquire lock on the second resource
 	acquired2, err := manager.AcquireLock(ctx, resource2, time.Second)
 	assert.NoError(t, err)
 	assert.True(t, acquired2, "Should acquire lock for different resource")
 
-	// Släpp båda låsen
+	// Release both locks
 	err = manager.ReleaseLock(resource1)
 	assert.NoError(t, err)
 	err = manager.ReleaseLock(resource2)
@@ -132,7 +132,7 @@ func TestCleanupExpiredLocks(t *testing.T) {
 	ctx := context.Background()
 	shortDuration := time.Millisecond * 100
 
-	// Skapa flera lås med kort TTL
+	// Create multiple locks with short TTL
 	for i := 0; i < 5; i++ {
 		resourceID := fmt.Sprintf("resource_%d", i)
 		acquired, err := manager.AcquireLock(ctx, resourceID, shortDuration)
@@ -140,10 +140,10 @@ func TestCleanupExpiredLocks(t *testing.T) {
 		assert.True(t, acquired)
 	}
 
-	// Vänta på att låsen ska gå ut och cleanup ska köras
+	// Wait until the locks expire and cleanup runs
 	time.Sleep(shortDuration * 3)
 
-	// Verifiera att låsen har städats bort
+	// Verify that the locks have been cleaned up
 	manager.mu.RLock()
 	numLocks := len(manager.locks)
 	manager.mu.RUnlock()
@@ -154,18 +154,18 @@ func TestContextCancellation(t *testing.T) {
 	manager := NewMemoryLockManager()
 	resourceID := "test_resource"
 
-	// Skapa en context med cancel
+	// Create a context with cancellation
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Låsa resursen
+	// Acquire the lock on the resource
 	acquired, err := manager.AcquireLock(ctx, resourceID, time.Second)
 	assert.NoError(t, err)
 	assert.True(t, acquired)
 
-	// Avbryt context
+	// Cancel the context
 	cancel()
 
-	// Försök låsa resursen med avbruten context
+	// Try acquiring the resource with a cancelled context
 	_, err = manager.AcquireLock(ctx, resourceID, time.Second)
 	assert.Error(t, err, "Should fail when context is cancelled")
 }

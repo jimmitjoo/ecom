@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockProductRepository är en mock-implementation av ProductRepository interface
+// MockProductRepository is a mock implementation of the ProductRepository interface
 type MockProductRepository struct {
 	mock.Mock
 }
@@ -53,24 +53,24 @@ func (m *MockProductRepository) StoreEvent(event *models.Event) error {
 	return args.Error(0)
 }
 
-// TestProductRepositoryInterface verifierar att interfacet implementeras korrekt
+// TestProductRepositoryInterface verifies that the interface is implemented correctly
 func TestProductRepositoryInterface(t *testing.T) {
 	var _ repositories.ProductRepository = &MockProductRepository{}
 }
 
-// TestRepositoryErrors verifierar att repository errors är korrekt definierade
+// TestRepositoryErrors verifies that repository errors are defined correctly
 func TestRepositoryErrors(t *testing.T) {
-	// Verifiera att ErrProductNotFound är definierat
+	// Verify that ErrProductNotFound is defined
 	assert.NotNil(t, models.ErrProductNotFound)
 	assert.Contains(t, models.ErrProductNotFound.Error(), "not found")
 
-	// Verifiera att andra repository errors är korrekt definierade
+	// Verify that other repository errors are defined correctly
 	var ErrVersionConflict = errors.New("version conflict")
 	assert.NotNil(t, ErrVersionConflict)
 	assert.Contains(t, ErrVersionConflict.Error(), "version conflict")
 }
 
-// TestMockRepositoryUsage visar hur mock repository kan användas
+// TestMockRepositoryUsage shows how the mock repository can be used
 func TestMockRepositoryUsage(t *testing.T) {
 	repo := new(MockProductRepository)
 	product := &models.Product{
@@ -79,30 +79,30 @@ func TestMockRepositoryUsage(t *testing.T) {
 		BaseTitle: "Test Product",
 	}
 
-	// Testa Create
+	// Test Create
 	repo.On("Create", product).Return(nil)
 	err := repo.Create(product)
 	assert.NoError(t, err)
 
-	// Testa GetByID
+	// Test GetByID
 	repo.On("GetByID", product.ID).Return(product, nil)
 	retrieved, err := repo.GetByID(product.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, product.ID, retrieved.ID)
 
-	// Testa GetByID med not found error
+	// Test GetByID with not found error
 	repo.On("GetByID", "nonexistent").Return(nil, models.ErrProductNotFound)
 	_, err = repo.GetByID("nonexistent")
 	assert.ErrorIs(t, err, models.ErrProductNotFound)
 
-	// Testa List
+	// Test List
 	products := []*models.Product{product}
 	repo.On("List", 1, 10).Return(products, 1, nil)
 	listed, _, err := repo.List(1, 10)
 	assert.NoError(t, err)
 	assert.Len(t, listed, 1)
 
-	// Testa Event hantering
+	// Test Event handling
 	event := &models.Event{
 		ID:       "test_event_1",
 		Type:     models.EventProductCreated,
@@ -127,11 +127,11 @@ func TestMockRepositoryUsage(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
-// TestRepositoryErrorHandling verifierar att repository errors hanteras korrekt
+// TestRepositoryErrorHandling verifies that repository errors are handled correctly
 func TestRepositoryErrorHandling(t *testing.T) {
 	repo := new(MockProductRepository)
 
-	// Sätt upp mock-förväntningar först
+	// Set up mock expectations first
 	repo.On("GetByID", "nonexistent").Return(nil, models.ErrProductNotFound)
 
 	testCases := []struct {
@@ -168,7 +168,7 @@ func TestRepositoryErrorHandling(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
-// TestEventHandling verifierar att event hantering fungerar korrekt
+// TestEventHandling verifies that event handling works correctly
 func TestEventHandling(t *testing.T) {
 	repo := new(MockProductRepository)
 	product := &models.Product{
@@ -178,7 +178,7 @@ func TestEventHandling(t *testing.T) {
 		Version:   1,
 	}
 
-	// Skapa en sekvens av events
+	// Create a sequence of events
 	events := []*models.Event{
 		{
 			ID:       "evt_1",
@@ -205,16 +205,16 @@ func TestEventHandling(t *testing.T) {
 		},
 	}
 
-	// Testa att hämta events från olika versioner
+	// Test getting events from different versions
 	repo.On("GetEventsByProductID", product.ID, int64(1)).Return(events, nil)
 	repo.On("GetEventsByProductID", product.ID, int64(2)).Return(events[1:], nil)
 
-	// Hämta alla events
+	// Get all events
 	allEvents, err := repo.GetEventsByProductID(product.ID, 1)
 	assert.NoError(t, err)
 	assert.Len(t, allEvents, 2)
 
-	// Hämta events från version 2
+	// Get events from version 2
 	laterEvents, err := repo.GetEventsByProductID(product.ID, 2)
 	assert.NoError(t, err)
 	assert.Len(t, laterEvents, 1)

@@ -49,22 +49,22 @@ func (p *MemoryEventPublisher) Unsubscribe(eventType models.EventType, handler f
 	defer p.mu.Unlock()
 
 	if handlers, exists := p.handlers[eventType]; exists {
-		// Skapa en ny slice för handlers
+		// Create a new slice for handlers
 		newHandlers := make([]func(*models.Event), 0)
 		handlerValue := reflect.ValueOf(handler)
 
-		// Kopiera alla handlers förutom den som ska tas bort
+		// Copy all handlers except the one to be removed
 		for _, h := range handlers {
 			if reflect.ValueOf(h).Pointer() != handlerValue.Pointer() {
 				newHandlers = append(newHandlers, h)
 			}
 		}
 
-		// Uppdatera handlers för denna event typ
+		// Update handlers for this event type
 		if len(newHandlers) > 0 {
 			p.handlers[eventType] = newHandlers
 		} else {
-			delete(p.handlers, eventType) // Ta bort hela event typen om det inte finns några handlers kvar
+			delete(p.handlers, eventType) // Remove the entire event type if there are no handlers left
 		}
 	}
 	return nil
